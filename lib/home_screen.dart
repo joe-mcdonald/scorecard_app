@@ -12,6 +12,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final List<List<TextEditingController>> playersControllers = [];
+
   bool showFairwayGreen = false;
   List<int> fairwaysHit = List.generate(18, (index) => 0);
   List<int> greensHit = List.generate(18, (index) => 0);
@@ -19,7 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<int> par = [5, 4, 3, 4, 5, 4, 5, 3, 4, 4, 5, 3, 4, 4, 5, 4, 3, 4];
   List<String> tees = ['Blacks', 'Blues', 'Whites', 'White/Greens', 'Greens', 'Green/Reds', 'Reds', 'Yellows'];
-  String selectedTee = 'Whites';
+  String selectedTee = 'WhiBtes';
 
   List<int> score = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
@@ -349,6 +351,22 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // Widget _buildTextField(int playerIndex, int holeIndex) {
+  //   return TextField(
+  //     controller: playersControllers[playerIndex][holeIndex],
+  //     decoration: InputDecoration(
+  //       border: OutlineInputBorder(),
+  //       contentPadding: EdgeInsets.all(8),
+  //     ),
+  //   );
+  // }
+
+  void _addPlayer() {
+    setState(() {
+      playersControllers.add(List.generate(18, (index) => TextEditingController()));
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -493,7 +511,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
-                SizedBox(height: showFairwayGreen ? 144 : 214),
+                SizedBox(height: showFairwayGreen ? 144 - 140 : 214 - 190),
                 Container(
                   height: 60,
                   decoration: BoxDecoration(
@@ -557,9 +575,15 @@ class _HomeScreenState extends State<HomeScreen> {
         child: SizedBox(
           child: Row(
             children: <Widget>[
+              IconButton(
+                  onPressed: () {
+                    _addPlayer();
+                  },
+                  icon: Icon(Icons.add)),
+
               if (showFairwayGreen)
                 Padding(
-                  padding: const EdgeInsets.only(left: 8.0), // Padding to push it closer to the left edge
+                  padding: const EdgeInsets.only(left: 8.0), // Padding to push it closer to the left edg
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
