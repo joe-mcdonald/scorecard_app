@@ -1,8 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:scorecard_app/widgets/player_row.dart';
 import 'package:scorecard_app/widgets/settings_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'dart:async';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:csv/csv.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -12,159 +16,52 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final List<List<TextEditingController>> playersControllers = [];
+  final List<List<TextEditingController>> playersControllers = [
+    List.generate(18, (index) => TextEditingController()),
+  ];
+  final List<List<int>> playersScores = [
+    List.generate(18, (index) => 0),
+  ];
+  final List<List<FocusNode>> playersFocusNodes = [
+    List.generate(18, (index) => FocusNode()),
+  ];
+  final List<TextEditingController> nameControllers = [
+    TextEditingController(),
+  ];
 
+  bool _isLoading = true;
   bool showFairwayGreen = false;
   List<int> fairwaysHit = List.generate(18, (index) => 0);
   List<int> greensHit = List.generate(18, (index) => 0);
   int _selectedIndex = 0;
 
-  List<int> par = [5, 4, 3, 4, 5, 4, 5, 3, 4, 4, 5, 3, 4, 4, 5, 4, 3, 4];
-  List<String> tees = ['Blacks', 'Blues', 'Whites', 'White/Greens', 'Greens', 'Green/Reds', 'Reds', 'Yellows'];
-  String selectedTee = 'WhiBtes';
+  String selectedCourse = 'Shaughnessy';
 
-  List<int> score = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  List<int> par = [];
+  List<String> tees = [];
+  List<int> mensHcap = [];
+  List<int> womensHcap = [];
+  String selectedHcap = 'mens'; // add button to set to 'womens'
+  String selectedTee = '';
+  Map<String, List<int>> yardages = {};
+
+  List<int> score = List.generate(18, (index) => 0);
 
   int get frontNineScore => score.sublist(0, 9).reduce((a, b) => a + b);
   int get backNineScore => score.sublist(9, 18).reduce((a, b) => a + b);
   int get frontNinePar => par.sublist(0, 9).reduce((a, b) => a + b);
   int get backNinePar => par.sublist(9, 18).reduce((a, b) => a + b);
 
-  List<FocusNode> focusNodes = List.generate(18, (index) => FocusNode());
   List<TextEditingController> controllers = List.generate(18, (index) => TextEditingController());
-
-  List<int> black = [475, 389, 200, 418, 471, 428, 551, 210, 421, 453, 520, 173, 442, 315, 577, 372, 158, 472];
-  int blackFront = 3563;
-  int blackBack = 3482;
-  int blackTotal = 7045;
-
-  List<int> blue = [457, 376, 180, 410, 463, 364, 529, 192, 390, 425, 485, 169, 420, 307, 550, 368, 150, 437];
-  int blueFront = 3361;
-  int blueBack = 3311;
-  int blueTotal = 6672;
-
-  List<int> white = [452, 368, 168, 403, 451, 324, 516, 181, 362, 410, 460, 157, 403, 299, 531, 330, 141, 388];
-  int whiteFront = 3225;
-  int whiteBack = 3119;
-  int whiteTotal = 6344;
-
-  List<int> whiteGreen = [452, 368, 168, 382, 451, 324, 462, 181, 362, 366, 460, 157, 341, 299, 464, 330, 141, 388];
-  int whiteGreenFront = 3150;
-  int whiteGreenBack = 2989;
-  int whiteGreenTotal = 6139;
-
-  List<int> green = [432, 357, 157, 382, 427, 315, 462, 129, 341, 366, 338, 149, 341, 285, 464, 319, 133, 378];
-  int greenFront = 3002;
-  int greenBack = 2773;
-  int greenTotal = 5775;
-
-  List<int> greenRed = [432, 357, 157, 300, 427, 315, 437, 129, 341, 316, 338, 149, 334, 285, 449, 319, 133, 378];
-  int greenRedFront = 2898;
-  int greenRedBack = 2711;
-  int greenRedTotal = 5609;
-
-  List<int> red = [426, 350, 115, 300, 418, 305, 437, 125, 284, 316, 331, 142, 334, 280, 449, 334, 127, 378];
-  int redFront = 2760;
-  int redBack = 2671;
-  int redTotal = 5431;
-
-  List<int> yellow = [319, 244, 115, 263, 319, 219, 339, 125, 244, 270, 331, 142, 263, 190, 359, 239, 127, 259];
-  int yellowFront = 2187;
-  int yellowBack = 2189;
-  int yellowTotal = 4376;
-
-  void _showActionSheet(BuildContext context) {
-    showCupertinoModalPopup<void>(
-      context: context,
-      builder: (BuildContext context) => SizedBox(
-        height: 300,
-        child: CupertinoActionSheet(
-          title: const Text('Tees'),
-          message: const Text('Select a tee.'),
-          actions: <CupertinoActionSheetAction>[
-            CupertinoActionSheetAction(
-              onPressed: () {
-                setState(() {
-                  selectedTee = 'Blacks';
-                });
-                Navigator.pop(context);
-              },
-              child: const Text('Blacks'),
-            ),
-            CupertinoActionSheetAction(
-              onPressed: () {
-                setState(() {
-                  selectedTee = 'Blues';
-                });
-                Navigator.pop(context);
-              },
-              child: const Text('Blues'),
-            ),
-            CupertinoActionSheetAction(
-              onPressed: () {
-                setState(() {
-                  selectedTee = 'Whites';
-                });
-                Navigator.pop(context);
-              },
-              isDefaultAction: true,
-              child: const Text('Whites'),
-            ),
-            CupertinoActionSheetAction(
-              onPressed: () {
-                setState(() {
-                  selectedTee = 'White/Greens';
-                });
-                Navigator.pop(context);
-              },
-              child: const Text('White/Greens'),
-            ),
-            CupertinoActionSheetAction(
-              onPressed: () {
-                setState(() {
-                  selectedTee = 'Greens';
-                });
-                Navigator.pop(context);
-              },
-              child: const Text('Greens'),
-            ),
-            CupertinoActionSheetAction(
-              onPressed: () {
-                setState(() {
-                  selectedTee = 'Green/Reds';
-                });
-                Navigator.pop(context);
-              },
-              child: const Text('Green/Reds'),
-            ),
-            CupertinoActionSheetAction(
-              onPressed: () {
-                setState(() {
-                  selectedTee = 'Reds';
-                });
-                Navigator.pop(context);
-              },
-              child: const Text('Reds'),
-            ),
-            CupertinoActionSheetAction(
-              onPressed: () {
-                setState(() {
-                  selectedTee = 'Yellows';
-                });
-                Navigator.pop(context);
-              },
-              child: const Text('Yellows'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  List<FocusNode> focusNodes = List.generate(18, (index) => FocusNode());
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
+    _loadCourseData('bigskygc').then((_) {
+      setState(() {}); // Trigger a rebuild after loading course data
+    });
     for (int i = 0; i < controllers.length; i++) {
       controllers[i].addListener(() {
         int? value = int.tryParse(controllers[i].text);
@@ -190,6 +87,25 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  Future<void> _loadCourseData(String course) async {
+    final rawData = await rootBundle.loadString('assets/${course}.csv');
+    List<List<dynamic>> csvData = const CsvToListConverter().convert(rawData);
+
+    setState(() {
+      par = csvData[2].sublist(1).map((e) => e as int).toList();
+      mensHcap = csvData[3].sublist(1).map((e) => e as int).toList();
+      womensHcap = csvData[4].sublist(1).map((e) => e as int).toList();
+      tees = csvData.map((row) => row[0].toString()).skip(5).toList();
+      for (var row in csvData.skip(5)) {
+        String teeName = row[0];
+        List<int> yardage = row.sublist(1).map((e) => e as int).toList();
+        yardages[teeName] = yardage;
+      }
+      selectedTee = tees[0];
+      _isLoading = false;
+    });
+  }
+
   Future<void> _saveScores() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('score', jsonEncode(score));
@@ -204,7 +120,6 @@ class _HomeScreenState extends State<HomeScreen> {
       fairwaysHit = (jsonDecode(prefs.getString('fairwaysHit') ?? '[]') as List<dynamic>).cast<int>();
       greensHit = (jsonDecode(prefs.getString('greensHit') ?? '[]') as List<dynamic>).cast<int>();
 
-      // Ensure the lists have the correct length
       if (score.length != 18) {
         score = List.generate(18, (index) => 0);
       }
@@ -232,7 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
     showModalBottomSheet(
       context: context,
       builder: (context) => const SettingsPage(),
-    ).then((_) => _loadSettings()); // Reload settings after closing the modal
+    ).then((_) => _loadSettings()); // Reload settings after closing the model
   }
 
   void _toggleFairway(int index) {
@@ -251,13 +166,35 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _resetValues() {
     setState(() {
-      selectedTee = 'White';
-      score = List.generate(18, (index) => 0);
+      selectedTee = tees.isNotEmpty ? tees[0] : 'Whites';
+
+      // Reset scores for all players
+      playersScores.forEach((scores) {
+        for (int i = 0; i < scores.length; i++) {
+          scores[i] = 0;
+        }
+      });
+
+      // Clear all text controllers
+      playersControllers.forEach((controllers) {
+        for (var controller in controllers) {
+          controller.clear();
+        }
+      });
+
+      // Reset fairways and greens hit
       fairwaysHit = List.generate(18, (index) => 0);
       greensHit = List.generate(18, (index) => 0);
-      for (var controller in controllers) {
-        controller.clear();
-      }
+
+      // Clear the name controller for the first player only
+      nameControllers[0].clear();
+
+      // Remove all other players
+      playersControllers.removeRange(1, playersControllers.length);
+      playersScores.removeRange(1, playersScores.length);
+      playersFocusNodes.removeRange(1, playersFocusNodes.length);
+      nameControllers.removeRange(1, nameControllers.length);
+
       _saveScores();
     });
   }
@@ -279,96 +216,148 @@ class _HomeScreenState extends State<HomeScreen> {
     return greensHit.where((hit) => hit == 1).length;
   }
 
-  BoxDecoration _getDecoration(int index) {
-    int? input = int.tryParse(controllers[index].text);
-    if (input == null) return BoxDecoration();
-
-    int difference = input - par[index];
-    if (difference <= -2) {
-      return BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.black, width: 2),
-      );
-    } else if (difference == -1) {
-      return BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.black),
-      );
-    } else if (difference == 1) {
-      return BoxDecoration(
-        border: Border.all(color: Colors.black),
-      );
-    } else if (difference >= 2) {
-      return BoxDecoration(
-        border: Border.all(color: Colors.black, width: 2),
-      );
-    }
-    return BoxDecoration(); // Default, no decoration
-  }
-
-  Widget _buildTextField(int index) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(10), // Adjust padding as needed
-          child: TextField(
-            focusNode: focusNodes[index],
-            controller: controllers[index],
-            onChanged: (text) {
-              int? value = int.tryParse(text);
-              if (value != null) {
-                setState(() {
-                  score[index] = value;
-                  _saveScores();
-                });
-              } else {
-                setState(() {
-                  score[index] = 0;
-                  _saveScores();
-                });
-              }
-            },
-            decoration: InputDecoration(
-              hintText: '${par[index]}',
-              hintStyle: const TextStyle(color: Colors.grey, fontSize: 30), // Adjust font size as needed
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.zero, // Remove default padding
-            ),
-            keyboardType: TextInputType.number,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.black, fontSize: 30), // Adjust font size as needed
-          ),
-        ),
-        Positioned.fill(
-          child: IgnorePointer(
-            child: CustomPaint(
-              painter: _ShapePainter(par[index], int.tryParse(controllers[index].text)),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // Widget _buildTextField(int playerIndex, int holeIndex) {
-  //   return TextField(
-  //     controller: playersControllers[playerIndex][holeIndex],
-  //     decoration: InputDecoration(
-  //       border: OutlineInputBorder(),
-  //       contentPadding: EdgeInsets.all(8),
-  //     ),
-  //   );
-  // }
-
   void _addPlayer() {
     setState(() {
       playersControllers.add(List.generate(18, (index) => TextEditingController()));
+      playersScores.add(List.generate(18, (index) => 0));
+      playersFocusNodes.add(List.generate(18, (index) => FocusNode()));
+      nameControllers.add(TextEditingController());
     });
+  }
+
+  void _showActionSheet(BuildContext context) {
+    showCupertinoModalPopup<void>(
+      context: context,
+      builder: (BuildContext context) => SizedBox(
+        height: 300,
+        child: CupertinoActionSheet(
+          title: const Text('Tees'),
+          message: const Text('Select a tee.'),
+          actions: tees.map((tee) {
+            return CupertinoActionSheetAction(
+              onPressed: () {
+                setState(() {
+                  selectedTee = tee;
+                });
+                Navigator.pop(context);
+              },
+              child: Text(tee),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  void _showCourseActionSheet(BuildContext context) {
+    showCupertinoModalPopup<void>(
+      context: context,
+      builder: (BuildContext context) => SizedBox(
+        height: 300,
+        child: CupertinoActionSheet(
+          title: const Text('Courses'),
+          message: const Text('Select a course.'),
+          actions: () {
+            return [
+              CupertinoActionSheetAction(
+                onPressed: () {
+                  _loadCourseData('bigskygc');
+                  setState(() {
+                    selectedCourse = 'Big Sky GC';
+                  });
+                  Navigator.pop(context);
+                },
+                child: const Text('Big Sky'),
+              ),
+              CupertinoActionSheetAction(
+                onPressed: () {
+                  _loadCourseData('highlandpacific');
+                  setState(() {
+                    selectedCourse = 'Highland Pacific';
+                  });
+                  Navigator.pop(context);
+                },
+                child: const Text('Highland Pacific'),
+              ),
+              CupertinoActionSheetAction(
+                onPressed: () {
+                  _loadCourseData('marinedrive');
+                  setState(() {
+                    selectedCourse = 'Marine Drive GC';
+                  });
+                  Navigator.pop(context);
+                },
+                child: const Text('Marine Drive GC'),
+              ),
+              CupertinoActionSheetAction(
+                onPressed: () {
+                  _loadCourseData('nicklausnorth');
+                  setState(() {
+                    selectedCourse = 'Nicklaus North GC';
+                  });
+                  Navigator.pop(context);
+                },
+                child: const Text('Nicklaus North GC'),
+              ),
+              CupertinoActionSheetAction(
+                onPressed: () {
+                  _loadCourseData('pheasantglen');
+                  setState(() {
+                    selectedCourse = 'Pheasant Glen';
+                  });
+                  Navigator.pop(context);
+                },
+                child: const Text('Pheasant Glen'),
+              ),
+              CupertinoActionSheetAction(
+                onPressed: () {
+                  _loadCourseData('pointgrey');
+                  setState(() {
+                    selectedCourse = 'Point Grey GC';
+                  });
+                  Navigator.pop(context);
+                },
+                child: const Text('Point Grey GC'),
+              ),
+              CupertinoActionSheetAction(
+                onPressed: () {
+                  _loadCourseData('shaughnessy');
+                  setState(() {
+                    selectedCourse = 'Shaughnessy G&CC';
+                  });
+                  Navigator.pop(context);
+                },
+                isDefaultAction: true,
+                child: const Text('Shaughnessy G&CC'),
+              ),
+              CupertinoActionSheetAction(
+                onPressed: () {
+                  _loadCourseData('whistlergc');
+                  setState(() {
+                    selectedCourse = 'Whistler GC';
+                  });
+                  Navigator.pop(context);
+                },
+                child: const Text('Whistler GC'),
+              ),
+            ];
+          }(),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: const Color.fromARGB(255, 0, 120, 79),
+          title: const Text('Loading...', style: TextStyle(color: Colors.white)),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 0, 120, 79),
@@ -376,7 +365,15 @@ class _HomeScreenState extends State<HomeScreen> {
           icon: const Icon(Icons.settings, color: Colors.white),
           onPressed: () => _onItemTapped(1),
         ),
-        title: const Text('Scorecard', style: TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.bold)),
+        title: TextButton(
+          onPressed: () {
+            _showCourseActionSheet(context);
+          },
+          child: Text(
+            selectedCourse,
+            style: const TextStyle(color: Colors.white, fontSize: 18),
+          ),
+        ),
         actions: [
           TextButton(
             child: Text(
@@ -401,45 +398,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   scrollDirection: Axis.horizontal,
                   child: Column(
                     children: [
-                      Row(
-                        children: List.generate(18, (index) {
-                          return Container(
-                            width: 100,
-                            height: 80,
-                            margin: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.only(
-                                topLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
-                                topRight: index == 17 ? const Radius.circular(12) : Radius.zero,
-                              ),
-                            ),
-                            child: Center(
-                              child: Column(
-                                children: [
-                                  const SizedBox(height: 5),
-                                  Text(
-                                    'Hole ${index + 1}',
-                                    style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 20),
-                                  ),
-                                  Text(
-                                    'Par ${par[index]}',
-                                    style: const TextStyle(color: Colors.black),
-                                  ),
-                                  Text(
-                                    '${selectedTee == 'Blacks' ? black[index] : selectedTee == 'Blues' ? blue[index] : selectedTee == 'Whites' ? white[index] : selectedTee == 'White/Greens' ? whiteGreen[index] : selectedTee == 'Greens' ? green[index] : selectedTee == 'Green/Reds' ? greenRed[index] : selectedTee == 'Reds' ? red[index] : yellow[index]} yards',
-                                    style: const TextStyle(color: Colors.black),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }),
-                      ),
-                      Row(
-                        children: List.generate(
-                          18,
-                          (index) {
+                      Padding(
+                        padding: const EdgeInsets.only(right: 20),
+                        child: Row(
+                          children: List.generate(18, (index) {
                             return Container(
                               width: 100,
                               height: 100,
@@ -447,65 +409,109 @@ class _HomeScreenState extends State<HomeScreen> {
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.only(
+                                  topLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
+                                  topRight: index == 17 ? const Radius.circular(12) : Radius.zero,
                                   bottomLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
                                   bottomRight: index == 17 ? const Radius.circular(12) : Radius.zero,
                                 ),
                               ),
                               child: Center(
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  child: _buildTextField(index),
+                                child: Column(
+                                  children: [
+                                    const SizedBox(height: 5),
+                                    Text(
+                                      'Hole ${index + 1}',
+                                      style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 20),
+                                    ),
+                                    Text(
+                                      'Par ${par[index]}',
+                                      style: const TextStyle(color: Colors.black),
+                                    ),
+                                    Text(
+                                      '${yardages[selectedTee]?[index] ?? 0} yards',
+                                      style: const TextStyle(color: Colors.black),
+                                    ),
+                                    if (selectedHcap == 'mens')
+                                      Text(
+                                        'HCap: ${mensHcap[index]}',
+                                        style: const TextStyle(color: Colors.black),
+                                      ),
+                                    if (selectedHcap == 'womens')
+                                      Text(
+                                        'HCap: ${womensHcap[index]}',
+                                        style: const TextStyle(color: Colors.black),
+                                      ),
+                                  ],
                                 ),
                               ),
                             );
-                          },
+                          }),
                         ),
                       ),
+                      const SizedBox(height: 5),
+                      ...playersControllers.asMap().entries.map((entry) {
+                        int playerIndex = entry.key;
+                        List<TextEditingController> controllers = entry.value;
+                        List<FocusNode> focusNodes = playersFocusNodes[playerIndex];
+                        List<int> scores = playersScores[playerIndex];
+                        TextEditingController nameController = nameControllers[playerIndex];
+                        return PlayerRow(
+                          score: scores,
+                          fairwaysHit: fairwaysHit,
+                          greensHit: greensHit,
+                          par: par,
+                          focusNodes: focusNodes,
+                          controllers: controllers,
+                          nameController: nameController,
+                        );
+                      }),
                       if (showFairwayGreen) // Conditionally render the row based on the switch state
-                        Row(
-                          children: List.generate(
-                            18,
-                            (index) {
-                              return Container(
-                                width: 100,
-                                height: 70,
-                                margin: const EdgeInsets.all(2),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.only(
-                                    topLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
-                                    topRight: index == 17 ? const Radius.circular(12) : Radius.zero,
-                                    bottomLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
-                                    bottomRight: index == 17 ? const Radius.circular(12) : Radius.zero,
+                        Padding(
+                          padding: const EdgeInsets.only(right: 20.0),
+                          child: Row(
+                            children: List.generate(
+                              18,
+                              (index) {
+                                return Container(
+                                  width: 100,
+                                  height: 70,
+                                  margin: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.only(
+                                      topLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
+                                      topRight: index == 17 ? const Radius.circular(12) : Radius.zero,
+                                      bottomLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
+                                      bottomRight: index == 17 ? const Radius.circular(12) : Radius.zero,
+                                    ),
                                   ),
-                                ),
-                                child: Column(
-                                  children: [
-                                    SizedBox(
-                                      height: 35,
-                                      child: TextButton(
-                                        onPressed: () => _toggleFairway(index),
-                                        child: Text(
-                                          'Fairway',
-                                          style: TextStyle(fontSize: 13, color: fairwaysHit[index] == 1 ? Colors.green : Colors.red),
+                                  child: Column(
+                                    children: [
+                                      SizedBox(
+                                        height: 35,
+                                        child: TextButton(
+                                          onPressed: () => _toggleFairway(index),
+                                          child: Text(
+                                            'Fairway',
+                                            style: TextStyle(fontSize: 13, color: fairwaysHit[index] == 1 ? Colors.green : Colors.red),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    SizedBox(
-                                      height: 35,
-                                      child: TextButton(
-                                        onPressed: () => _toggleGreen(index),
-                                        child: Text(
-                                          'Green',
-                                          style: TextStyle(fontSize: 13, color: greensHit[index] == 1 ? Colors.green : Colors.red),
+                                      SizedBox(
+                                        height: 35,
+                                        child: TextButton(
+                                          onPressed: () => _toggleGreen(index),
+                                          child: Text(
+                                            'Green',
+                                            style: TextStyle(fontSize: 13, color: greensHit[index] == 1 ? Colors.green : Colors.red),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                         ),
                     ],
@@ -573,35 +579,37 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: BottomAppBar(
         height: 62.0,
         child: SizedBox(
+          height: 62,
           child: Row(
             children: <Widget>[
               IconButton(
                   onPressed: () {
                     _addPlayer();
                   },
-                  icon: Icon(Icons.add)),
+                  icon: const Icon(Icons.add)),
 
               if (showFairwayGreen)
                 Padding(
-                  padding: const EdgeInsets.only(left: 8.0), // Padding to push it closer to the left edg
+                  padding: const EdgeInsets.only(left: 12.0), // Padding to push it closer to the left edg
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         'Fairways Hit: ${_countFairwaysHit()}/15',
-                        style: TextStyle(fontSize: 11),
+                        style: const TextStyle(fontSize: 11),
                       ),
                       Text(
                         'Greens Hit: ${_countGreensHit()}/18',
-                        style: TextStyle(fontSize: 11),
+                        style: const TextStyle(fontSize: 11),
                       ),
                     ],
                   ),
                 ),
-              Spacer(), // Pushes the settings button to the right
+              const Spacer(), // Pushes the settings button to the right
               TextButton(
-                onPressed: () {
+                onPressed: () {},
+                onLongPress: () {
                   _resetValues();
                 },
                 child: const Text('Reset', style: TextStyle(fontSize: 20, color: Colors.red)),
@@ -611,75 +619,5 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
-  }
-}
-
-class _ShapePainter extends CustomPainter {
-  final int par;
-  final int? score;
-
-  _ShapePainter(this.par, this.score);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (score == null) return;
-
-    final paint = Paint()
-      ..color = Colors.black
-      ..style = PaintingStyle.stroke // Use stroke to create outlines
-      ..strokeWidth = 3.0; // Make circles thicker to match squares
-
-    int difference = score! - par;
-
-    if (difference <= -2) {
-      _drawCircles(canvas, size, 2);
-    } else if (difference == -1) {
-      _drawCircles(canvas, size, 1);
-    } else if (difference == 1) {
-      _drawSquares(canvas, size, 1);
-    } else if (difference >= 2) {
-      _drawSquares(canvas, size, 2);
-    }
-  }
-
-  void _drawCircles(Canvas canvas, Size size, int count) {
-    final radius = size.width / 3; // Adjust radius to ensure circles are smaller
-    final center = Offset(size.width / 2, size.height / 2);
-
-    for (int i = 0; i < count; i++) {
-      final offset = Offset(
-        center.dx + (i - (count - 1) / 2) * radius * 0, // Further reduce the offset to fully overlap circles
-        center.dy,
-      );
-      canvas.drawCircle(
-        offset,
-        radius - i * 8, // Adjust size to create smaller inner circles
-        Paint()
-          ..color = Colors.black
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3.0, // Ensure thickness matches squares
-      );
-    }
-  }
-
-  void _drawSquares(Canvas canvas, Size size, int count) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final paint = Paint()
-      ..color = Colors.black
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0; // Make squares thicker
-
-    for (int i = 0; i < count; i++) {
-      final halfSize = size.width / 5 * (1 - 0.3 * i); // smaller size to fit within grid
-      canvas.drawRect(
-        Rect.fromCenter(center: center, width: halfSize * 3, height: halfSize * 3),
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return true;
   }
 }
