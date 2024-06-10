@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:scorecard_app/widgets/course_action_sheet.dart';
 import 'package:scorecard_app/widgets/player_row.dart';
 import 'package:scorecard_app/widgets/settings_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,6 +18,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  ScrollController scrollController = ScrollController();
   final List<List<TextEditingController>> playersControllers = [
     List.generate(18, (index) => TextEditingController()),
   ];
@@ -29,8 +32,9 @@ class _HomeScreenState extends State<HomeScreen> {
     TextEditingController(),
   ];
 
-  bool _isLoading = true;
+  bool isLoading = true;
   bool showFairwayGreen = false;
+  bool mensHandicap = true;
   List<int> fairwaysHit = List.generate(18, (index) => 0);
   List<int> greensHit = List.generate(18, (index) => 0);
   int _selectedIndex = 0;
@@ -41,7 +45,6 @@ class _HomeScreenState extends State<HomeScreen> {
   List<String> tees = [];
   List<int> mensHcap = [];
   List<int> womensHcap = [];
-  String selectedHcap = 'mens'; // add button to set to 'womens'
   String selectedTee = '';
   Map<String, List<int>> yardages = {};
 
@@ -59,7 +62,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadSettings();
-    _loadCourseData('bigskygc').then((_) {
+    _loadCourseData('shaughnessy').then((_) {
       setState(() {}); // Trigger a rebuild after loading course data
     });
     for (int i = 0; i < controllers.length; i++) {
@@ -78,6 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    scrollController.dispose();
     for (var focusNode in focusNodes) {
       focusNode.dispose();
     }
@@ -88,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadCourseData(String course) async {
-    final rawData = await rootBundle.loadString('assets/${course}.csv');
+    final rawData = await rootBundle.loadString('assets/$course.csv');
     List<List<dynamic>> csvData = const CsvToListConverter().convert(rawData);
 
     setState(() {
@@ -102,7 +106,20 @@ class _HomeScreenState extends State<HomeScreen> {
         yardages[teeName] = yardage;
       }
       selectedTee = tees[0];
-      _isLoading = false;
+      isLoading = false;
+    });
+  }
+
+  void _onCourseDataLoaded(List<int> loadedPar, List<int> loadedMensHcap, List<int> loadedWomensHcap, List<String> loadedTees,
+      Map<String, List<int>> loadedYardages, String loadedSelectedTee) {
+    setState(() {
+      par = loadedPar;
+      mensHcap = loadedMensHcap;
+      womensHcap = loadedWomensHcap;
+      tees = loadedTees;
+      yardages = loadedYardages;
+      selectedTee = loadedSelectedTee;
+      isLoading = false;
     });
   }
 
@@ -140,6 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       showFairwayGreen = prefs.getBool('showFairwayGreen') ?? false;
+      mensHandicap = prefs.getBool('mensHandicap') ?? false;
     });
   }
 
@@ -168,19 +186,14 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       selectedTee = tees.isNotEmpty ? tees[0] : 'Whites';
 
-      // Reset scores for all players
-      playersScores.forEach((scores) {
-        for (int i = 0; i < scores.length; i++) {
-          scores[i] = 0;
-        }
-      });
+      // Reset scores for the first player only
+      playersScores[0] = List.generate(18, (index) => 0);
+      score = List.generate(18, (index) => 0);
 
-      // Clear all text controllers
-      playersControllers.forEach((controllers) {
-        for (var controller in controllers) {
-          controller.clear();
-        }
-      });
+      // Clear text controllers for the first player only
+      for (var controller in playersControllers[0]) {
+        controller.clear();
+      }
 
       // Reset fairways and greens hit
       fairwaysHit = List.generate(18, (index) => 0);
@@ -225,7 +238,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _showActionSheet(BuildContext context) {
+  void _showTeesActionSheet(BuildContext context) {
     showCupertinoModalPopup<void>(
       context: context,
       builder: (BuildContext context) => SizedBox(
@@ -249,107 +262,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showCourseActionSheet(BuildContext context) {
-    showCupertinoModalPopup<void>(
-      context: context,
-      builder: (BuildContext context) => SizedBox(
-        height: 300,
-        child: CupertinoActionSheet(
-          title: const Text('Courses'),
-          message: const Text('Select a course.'),
-          actions: () {
-            return [
-              CupertinoActionSheetAction(
-                onPressed: () {
-                  _loadCourseData('bigskygc');
-                  setState(() {
-                    selectedCourse = 'Big Sky GC';
-                  });
-                  Navigator.pop(context);
-                },
-                child: const Text('Big Sky'),
-              ),
-              CupertinoActionSheetAction(
-                onPressed: () {
-                  _loadCourseData('highlandpacific');
-                  setState(() {
-                    selectedCourse = 'Highland Pacific';
-                  });
-                  Navigator.pop(context);
-                },
-                child: const Text('Highland Pacific'),
-              ),
-              CupertinoActionSheetAction(
-                onPressed: () {
-                  _loadCourseData('marinedrive');
-                  setState(() {
-                    selectedCourse = 'Marine Drive GC';
-                  });
-                  Navigator.pop(context);
-                },
-                child: const Text('Marine Drive GC'),
-              ),
-              CupertinoActionSheetAction(
-                onPressed: () {
-                  _loadCourseData('nicklausnorth');
-                  setState(() {
-                    selectedCourse = 'Nicklaus North GC';
-                  });
-                  Navigator.pop(context);
-                },
-                child: const Text('Nicklaus North GC'),
-              ),
-              CupertinoActionSheetAction(
-                onPressed: () {
-                  _loadCourseData('pheasantglen');
-                  setState(() {
-                    selectedCourse = 'Pheasant Glen';
-                  });
-                  Navigator.pop(context);
-                },
-                child: const Text('Pheasant Glen'),
-              ),
-              CupertinoActionSheetAction(
-                onPressed: () {
-                  _loadCourseData('pointgrey');
-                  setState(() {
-                    selectedCourse = 'Point Grey GC';
-                  });
-                  Navigator.pop(context);
-                },
-                child: const Text('Point Grey GC'),
-              ),
-              CupertinoActionSheetAction(
-                onPressed: () {
-                  _loadCourseData('shaughnessy');
-                  setState(() {
-                    selectedCourse = 'Shaughnessy G&CC';
-                  });
-                  Navigator.pop(context);
-                },
-                isDefaultAction: true,
-                child: const Text('Shaughnessy G&CC'),
-              ),
-              CupertinoActionSheetAction(
-                onPressed: () {
-                  _loadCourseData('whistlergc');
-                  setState(() {
-                    selectedCourse = 'Whistler GC';
-                  });
-                  Navigator.pop(context);
-                },
-                child: const Text('Whistler GC'),
-              ),
-            ];
-          }(),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
+    if (isLoading) {
       return Scaffold(
         appBar: AppBar(
           backgroundColor: const Color.fromARGB(255, 0, 120, 79),
@@ -367,7 +282,25 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         title: TextButton(
           onPressed: () {
-            _showCourseActionSheet(context);
+            showCupertinoModalPopup<void>(
+              context: context,
+              builder: (BuildContext context) => CourseActionSheet(
+                onCourseSelected: (course, tee) {
+                  setState(() {
+                    selectedCourse = course;
+                    selectedTee = tee;
+                  });
+                },
+                onCourseDataLoaded: _onCourseDataLoaded,
+                par: par,
+                mensHcap: mensHcap,
+                womensHcap: womensHcap,
+                tees: tees,
+                yardages: yardages,
+                selectedTee: selectedTee,
+                isLoading: isLoading,
+              ),
+            );
           },
           child: Text(
             selectedCourse,
@@ -380,7 +313,9 @@ class _HomeScreenState extends State<HomeScreen> {
               selectedTee,
               style: const TextStyle(color: Colors.white),
             ),
-            onPressed: () => _showActionSheet(context),
+            onPressed: () {
+              _showTeesActionSheet(context);
+            },
           ),
         ],
       ),
@@ -396,52 +331,58 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
+                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                  controller: scrollController,
+                  physics: const ClampingScrollPhysics(),
                   child: Column(
                     children: [
                       Padding(
                         padding: const EdgeInsets.only(right: 20),
                         child: Row(
                           children: List.generate(18, (index) {
-                            return Container(
-                              width: 100,
-                              height: 100,
-                              margin: const EdgeInsets.all(2),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.only(
-                                  topLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
-                                  topRight: index == 17 ? const Radius.circular(12) : Radius.zero,
-                                  bottomLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
-                                  bottomRight: index == 17 ? const Radius.circular(12) : Radius.zero,
+                            return IgnorePointer(
+                              ignoring: false,
+                              child: Container(
+                                width: 100,
+                                height: 100,
+                                margin: const EdgeInsets.all(2),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
+                                    topRight: index == 17 ? const Radius.circular(12) : Radius.zero,
+                                    bottomLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
+                                    bottomRight: index == 17 ? const Radius.circular(12) : Radius.zero,
+                                  ),
                                 ),
-                              ),
-                              child: Center(
-                                child: Column(
-                                  children: [
-                                    const SizedBox(height: 5),
-                                    Text(
-                                      'Hole ${index + 1}',
-                                      style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 20),
-                                    ),
-                                    Text(
-                                      'Par ${par[index]}',
-                                      style: const TextStyle(color: Colors.black),
-                                    ),
-                                    Text(
-                                      '${yardages[selectedTee]?[index] ?? 0} yards',
-                                      style: const TextStyle(color: Colors.black),
-                                    ),
-                                    if (selectedHcap == 'mens')
+                                child: Center(
+                                  child: Column(
+                                    children: [
+                                      const SizedBox(height: 5),
                                       Text(
-                                        'HCap: ${mensHcap[index]}',
+                                        'Hole ${index + 1}',
+                                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 20),
+                                      ),
+                                      Text(
+                                        'Par ${par[index]}',
                                         style: const TextStyle(color: Colors.black),
                                       ),
-                                    if (selectedHcap == 'womens')
                                       Text(
-                                        'HCap: ${womensHcap[index]}',
+                                        '${yardages[selectedTee]?[index] ?? 0} yards',
                                         style: const TextStyle(color: Colors.black),
                                       ),
-                                  ],
+                                      if (mensHandicap == true)
+                                        Text(
+                                          'HCap: ${mensHcap[index]}',
+                                          style: const TextStyle(color: Colors.black),
+                                        ),
+                                      if (mensHandicap == false)
+                                        Text(
+                                          'HCap: ${womensHcap[index]}',
+                                          style: const TextStyle(color: Colors.black),
+                                        ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             );
@@ -463,6 +404,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           focusNodes: focusNodes,
                           controllers: controllers,
                           nameController: nameController,
+                          scrollController: scrollController,
                         );
                       }),
                       if (showFairwayGreen) // Conditionally render the row based on the switch state
@@ -487,26 +429,39 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   child: Column(
                                     children: [
-                                      SizedBox(
-                                        height: 35,
-                                        child: TextButton(
-                                          onPressed: () => _toggleFairway(index),
-                                          child: Text(
-                                            'Fairway',
-                                            style: TextStyle(fontSize: 13, color: fairwaysHit[index] == 1 ? Colors.green : Colors.red),
+                                      if (par[index] == 4 || par[index] == 5)
+                                        SizedBox(
+                                          height: 35,
+                                          child: TextButton(
+                                            onPressed: () => _toggleFairway(index),
+                                            child: Text(
+                                              'Fairway',
+                                              style: TextStyle(fontSize: 13, color: fairwaysHit[index] == 1 ? Colors.green : Colors.red),
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      SizedBox(
-                                        height: 35,
-                                        child: TextButton(
-                                          onPressed: () => _toggleGreen(index),
-                                          child: Text(
-                                            'Green',
-                                            style: TextStyle(fontSize: 13, color: greensHit[index] == 1 ? Colors.green : Colors.red),
+                                      if (par[index] == 4 || par[index] == 5)
+                                        SizedBox(
+                                          height: 35,
+                                          child: TextButton(
+                                            onPressed: () => _toggleGreen(index),
+                                            child: Text(
+                                              'Green',
+                                              style: TextStyle(fontSize: 13, color: greensHit[index] == 1 ? Colors.green : Colors.red),
+                                            ),
                                           ),
                                         ),
-                                      ),
+                                      if (par[index] == 3)
+                                        SizedBox(
+                                          height: 70,
+                                          child: TextButton(
+                                            onPressed: () => _toggleGreen(index),
+                                            child: Text(
+                                              'Green',
+                                              style: TextStyle(fontSize: 13, color: greensHit[index] == 1 ? Colors.green : Colors.red),
+                                            ),
+                                          ),
+                                        ),
                                     ],
                                   ),
                                 );
@@ -518,59 +473,59 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 SizedBox(height: showFairwayGreen ? 144 - 140 : 214 - 190),
-                Container(
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200], // Use the color within BoxDecoration
-                    borderRadius: BorderRadius.circular(12), // Add rounded corners
-                  ),
-                  child: Row(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: Column(
-                          children: [
-                            // const SizedBox(width: 80),
-                            Text(
-                              'Front: ${frontNineScore}',
-                              style: TextStyle(fontSize: 20),
-                            ),
-                            // const SizedBox(height: 10),
-                            Text(
-                              'Back: ${backNineScore}',
-                              style: TextStyle(fontSize: 20),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Spacer(),
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: Column(
-                          children: [
-                            if (!score.contains(0))
-                              Text(
-                                '${(frontNineScore + backNineScore) - (frontNinePar + backNinePar) < 0 ? '-' : '+'}${((frontNineScore + backNineScore) - (frontNinePar + backNinePar)).abs()}',
-                                style: TextStyle(
-                                    fontSize: 20,
-                                    color: (frontNineScore + backNineScore) - (frontNinePar + backNinePar) < 0
-                                        ? const Color.fromARGB(255, 0, 120, 79)
-                                        : Colors.black),
-                              ),
-                            Text(
-                              'Total: ${frontNineScore + backNineScore}',
-                              style: TextStyle(
-                                  fontSize: 20,
-                                  color: (frontNineScore + backNineScore) - (frontNinePar + backNinePar) < 0
-                                      ? const Color.fromARGB(255, 0, 120, 79)
-                                      : Colors.black),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                // Container(
+                //   height: 60,
+                //   decoration: BoxDecoration(
+                //     color: Colors.grey[200], // Use the color within BoxDecoration
+                //     borderRadius: BorderRadius.circular(12), // Add rounded corners
+                //   ),
+                //   child: Row(
+                //     children: [
+                //       Padding(
+                //         padding: const EdgeInsets.only(left: 8.0),
+                //         child: Column(
+                //           children: [
+                //             // const SizedBox(width: 80),
+                //             Text(
+                //               'Front: $frontNineScore',
+                //               style: const TextStyle(fontSize: 20),
+                //             ),
+                //             // const SizedBox(height: 10),
+                //             Text(
+                //               'Back: $backNineScore',
+                //               style: const TextStyle(fontSize: 20),
+                //             ),
+                //           ],
+                //         ),
+                //       ),
+                //       const Spacer(),
+                //       Padding(
+                //         padding: const EdgeInsets.only(right: 8.0),
+                //         child: Column(
+                //           children: [
+                //             if (!score.contains(0))
+                //               Text(
+                //                 '${(frontNineScore + backNineScore) - (frontNinePar + backNinePar) < 0 ? '-' : '+'}${((frontNineScore + backNineScore) - (frontNinePar + backNinePar)).abs()}',
+                //                 style: TextStyle(
+                //                     fontSize: 20,
+                //                     color: (frontNineScore + backNineScore) - (frontNinePar + backNinePar) < 0
+                //                         ? const Color.fromARGB(255, 0, 120, 79)
+                //                         : Colors.black),
+                //               ),
+                //             Text(
+                //               'Total: ${frontNineScore + backNineScore}',
+                //               style: TextStyle(
+                //                   fontSize: 20,
+                //                   color: (frontNineScore + backNineScore) - (frontNinePar + backNinePar) < 0
+                //                       ? const Color.fromARGB(255, 0, 120, 79)
+                //                       : Colors.black),
+                //             ),
+                //           ],
+                //         ),
+                //       ),
+                //     ],
+                //   ),
+                // ),
               ],
             ),
           ),
@@ -596,7 +551,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'Fairways Hit: ${_countFairwaysHit()}/15',
+                        'Fairways Hit: ${_countFairwaysHit()}/${par.where((p) => p == 4 || p == 5).length}',
                         style: const TextStyle(fontSize: 11),
                       ),
                       Text(
@@ -608,9 +563,29 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               const Spacer(), // Pushes the settings button to the right
               TextButton(
-                onPressed: () {},
-                onLongPress: () {
-                  _resetValues();
+                onPressed: () {
+                  showCupertinoDialog(
+                    context: context,
+                    builder: (BuildContext context) => CupertinoAlertDialog(
+                      title: const Text('Reset'),
+                      content: const Text('Are you sure you want to reset the scores?'),
+                      actions: [
+                        CupertinoDialogAction(
+                          onPressed: () {
+                            _resetValues();
+                            Navigator.pop(context);
+                          },
+                          child: const Text('Reset', style: TextStyle(fontSize: 20, color: Colors.red)),
+                        ),
+                        CupertinoDialogAction(
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          child: const Text('Cancel'),
+                        ),
+                      ],
+                    ),
+                  );
                 },
                 child: const Text('Reset', style: TextStyle(fontSize: 20, color: Colors.red)),
               ),

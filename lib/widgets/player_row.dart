@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:scorecard_app/home_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PlayerRow extends StatefulWidget {
@@ -10,6 +11,7 @@ class PlayerRow extends StatefulWidget {
   final List<FocusNode> focusNodes;
   final List<TextEditingController> controllers;
   final TextEditingController nameController;
+  final ScrollController scrollController;
 
   const PlayerRow({
     super.key,
@@ -20,6 +22,7 @@ class PlayerRow extends StatefulWidget {
     required this.focusNodes,
     required this.controllers,
     required this.nameController,
+    required this.scrollController,
   });
 
   @override
@@ -40,32 +43,72 @@ class _PlayerRowState extends State<PlayerRow> {
       children: [
         Padding(
           padding: const EdgeInsets.all(10), // Adjust padding as needed
-          child: TextField(
-            focusNode: widget.focusNodes[index],
-            controller: widget.controllers[index],
-            onChanged: (text) {
-              int? value = int.tryParse(text);
-              if (value != null) {
-                setState(() {
-                  widget.score[index] = value;
-                  _saveScores();
-                });
-              } else {
-                setState(() {
-                  widget.score[index] = 0;
-                  _saveScores();
-                });
-              }
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                widget.focusNodes[index].requestFocus();
+                widget.controllers[index].selection = TextSelection(
+                  baseOffset: 0,
+                  extentOffset: widget.controllers[index].text.length,
+                );
+
+                // Calculate the target scroll position
+                double screenWidth = MediaQuery.of(context).size.width;
+                double targetScrollPosition = (index * 105.0 + 10) - (screenWidth / 2 - 100); // Assuming each item is 100 wide plus margin
+
+                widget.scrollController.animateTo(
+                  targetScrollPosition,
+                  duration: const Duration(milliseconds: 50),
+                  curve: Curves.easeInOut,
+                );
+              });
             },
-            decoration: InputDecoration(
-              hintText: '${widget.par[index]}',
-              hintStyle: const TextStyle(color: Colors.grey, fontSize: 30), // Adjust font size as needed
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.zero, // Remove default padding
+            child: TextField(
+              onTap: () {
+                setState(() {
+                  widget.focusNodes[index].requestFocus();
+                  widget.controllers[index].selection = TextSelection(
+                    baseOffset: 0,
+                    extentOffset: widget.controllers[index].text.length,
+                  );
+
+                  // Calculate the target scroll position
+                  double screenWidth = MediaQuery.of(context).size.width;
+                  double targetScrollPosition = (index * 105.0 + 10) - (screenWidth / 2 - 100); // Assuming each item is 100 wide plus margin
+
+                  widget.scrollController.animateTo(
+                    targetScrollPosition,
+                    duration: const Duration(milliseconds: 10),
+                    curve: Curves.easeInOut,
+                  );
+                });
+              },
+              focusNode: widget.focusNodes[index],
+              controller: widget.controllers[index],
+              onChanged: (text) {
+                int? value = int.tryParse(text);
+                if (value != null) {
+                  setState(() {
+                    widget.score[index] = value;
+                    _saveScores();
+                  });
+                } else {
+                  setState(() {
+                    widget.score[index] = 0;
+                    _saveScores();
+                  });
+                }
+              },
+              decoration: InputDecoration(
+                hintText: '${widget.par[index]}',
+                hintStyle: const TextStyle(color: Colors.grey, fontSize: 30), // Adjust font size as needed
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero, // Remove default padding
+              ),
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.black, fontSize: 30), // Adjust font size as needed
             ),
-            keyboardType: TextInputType.number,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.black, fontSize: 30), // Adjust font size as needed
           ),
         ),
         Positioned.fill(
@@ -108,43 +151,36 @@ class _PlayerRowState extends State<PlayerRow> {
             style: const TextStyle(color: Colors.black, fontSize: 20),
           ),
         ),
-        ...List.generate(
-          18,
-          (index) {
-            return Container(
-              width: 100,
-              height: 100,
-              margin: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
-                  // topRight: index == 17 ? const Radius.circular(12) : Radius.zero,
-                  bottomLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
-                  // bottomRight: index == 17 ? const Radius.circular(12) : Radius.zero,
-                ),
+        ...List.generate(18, (index) {
+          return Container(
+            width: 100,
+            height: 80,
+            margin: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
+                bottomLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
               ),
-              child: Center(
-                child: SizedBox(
-                  width: double.infinity,
-                  height: double.infinity,
-                  child: _buildTextField(index),
-                ),
+            ),
+            child: Center(
+              child: SizedBox(
+                width: double.infinity,
+                height: double.infinity,
+                child: _buildTextField(index),
               ),
-            );
-          },
-        ),
+            ),
+          );
+        }),
         Container(
           width: 100,
-          height: 100,
+          height: 80,
           margin: const EdgeInsets.all(2),
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.only(
               topRight: Radius.circular(12),
               bottomRight: Radius.circular(12),
-              // topLeft: Radius.circular(12),
-              // bottomLeft: Radius.circular(12),
             ),
           ),
           child: Column(

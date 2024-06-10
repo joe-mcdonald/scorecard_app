@@ -13,6 +13,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   bool showFairwayGreen = false;
+  bool showMensHandicap = true;
   Timer? _popupTimer;
 
   @override
@@ -25,13 +26,14 @@ class _SettingsPageState extends State<SettingsPage> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       showFairwayGreen = prefs.getBool('showFairwayGreen') ?? false;
+      showMensHandicap = prefs.getBool('mensHandicap') ?? true;
     });
   }
 
-  Future<void> _saveSettings(bool showFairwayGreenValue) async {
+  Future<void> _saveSettings(bool showFairwayGreenValue, bool mensHandicapValue) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('showFairwayGreen', showFairwayGreenValue);
-    // await prefs.setBool('handicapMenOrWomen', handicapMenWomen); //men = true, women = false
+    await prefs.setBool('mensHandicap', mensHandicapValue); //men = true, women = false
   }
 
   void _showPopup() {
@@ -46,9 +48,9 @@ class _SettingsPageState extends State<SettingsPage> {
         child: Material(
           color: Colors.transparent,
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             color: Colors.black.withOpacity(0.1),
-            child: Text(
+            child: const Text(
               'To Bob, love Joe',
               style: TextStyle(color: Colors.white, fontSize: 16),
             ),
@@ -59,18 +61,14 @@ class _SettingsPageState extends State<SettingsPage> {
 
     Overlay.of(context)?.insert(entry);
 
-    Future.delayed(Duration(seconds: 1), () {
+    Future.delayed(const Duration(seconds: 1), () {
       entry.remove();
     });
   }
 
   void _startPopupTimer() {
     _popupTimer?.cancel();
-    _popupTimer = Timer(Duration(seconds: 4), _showPopup);
-  }
-
-  void _cancelPopupTimer() {
-    _popupTimer?.cancel();
+    _popupTimer = Timer(const Duration(seconds: 4), _showPopup);
   }
 
   @override
@@ -85,7 +83,7 @@ class _SettingsPageState extends State<SettingsPage> {
             'Settings',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -93,41 +91,38 @@ class _SettingsPageState extends State<SettingsPage> {
                 onLongPress: () {
                   _startPopupTimer();
                 },
-                child: Text('Show Fairway/Green'),
+                child: const Text('Show Fairway/Green'),
               ),
               CupertinoSwitch(
                 value: showFairwayGreen,
-                onChanged: (bool value) {
+                onChanged: (bool showFairwayGreenValue) {
                   setState(() {
-                    showFairwayGreen = value;
-                    _saveSettings(value);
+                    showFairwayGreen = showFairwayGreenValue;
+                    _saveSettings(showFairwayGreenValue, showMensHandicap);
                   });
                 },
               ),
             ],
           ),
-          // SizedBox(height: 20),
-          // Row(
-          //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          //   children: [
-          //     GestureDetector(
-          //       onLongPress: () {
-          //         _startPopupTimer();
-          //       },
-          //       child: Text('Handicap'),
-          //     ),
-          //     CupertinoSwitch(
-          //       value: showFairwayGreen,
-          //       activeColor: CupertinoColors.inactiveGray,
-          //       onChanged: (bool value) {
-          //         setState(() {
-          //           showFairwayGreen = value;
-          //           _saveSettings(value);
-          //         });
-          //       },
-          //     ),
-          //   ],
-          // ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              GestureDetector(
+                child: const Text('Mens Handicap'),
+              ),
+              CupertinoSwitch(
+                value: showMensHandicap,
+                activeColor: CupertinoColors.inactiveGray,
+                onChanged: (bool showMensHandicapValue) {
+                  setState(() {
+                    showMensHandicap = showMensHandicapValue;
+                    _saveSettings(showFairwayGreen, showMensHandicapValue);
+                  });
+                },
+              ),
+            ],
+          ),
         ],
       ),
     );
