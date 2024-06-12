@@ -1,5 +1,4 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:scorecard_app/widgets/course_action_sheet.dart';
 import 'package:scorecard_app/widgets/player_row.dart';
@@ -344,7 +343,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ignoring: false,
                               child: Container(
                                 width: 100,
-                                height: 100,
+                                height: 110,
                                 margin: const EdgeInsets.all(2),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
