@@ -54,7 +54,8 @@ class _HomeScreenState extends State<HomeScreen> {
   int get frontNinePar => par.sublist(0, 9).reduce((a, b) => a + b);
   int get backNinePar => par.sublist(9, 18).reduce((a, b) => a + b);
 
-  List<TextEditingController> controllers = List.generate(18, (index) => TextEditingController());
+  List<TextEditingController> controllers =
+      List.generate(18, (index) => TextEditingController());
   List<FocusNode> focusNodes = List.generate(18, (index) => FocusNode());
 
   @override
@@ -109,8 +110,13 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _onCourseDataLoaded(List<int> loadedPar, List<int> loadedMensHcap, List<int> loadedWomensHcap, List<String> loadedTees,
-      Map<String, List<int>> loadedYardages, String loadedSelectedTee) {
+  void _onCourseDataLoaded(
+      List<int> loadedPar,
+      List<int> loadedMensHcap,
+      List<int> loadedWomensHcap,
+      List<String> loadedTees,
+      Map<String, List<int>> loadedYardages,
+      String loadedSelectedTee) {
     setState(() {
       par = loadedPar;
       mensHcap = loadedMensHcap;
@@ -132,9 +138,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadScores() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      score = (jsonDecode(prefs.getString('score') ?? '[]') as List<dynamic>).cast<int>();
-      fairwaysHit = (jsonDecode(prefs.getString('fairwaysHit') ?? '[]') as List<dynamic>).cast<int>();
-      greensHit = (jsonDecode(prefs.getString('greensHit') ?? '[]') as List<dynamic>).cast<int>();
+      score = (jsonDecode(prefs.getString('score') ?? '[]') as List<dynamic>)
+          .cast<int>();
+      fairwaysHit =
+          (jsonDecode(prefs.getString('fairwaysHit') ?? '[]') as List<dynamic>)
+              .cast<int>();
+      greensHit =
+          (jsonDecode(prefs.getString('greensHit') ?? '[]') as List<dynamic>)
+              .cast<int>();
 
       if (score.length != 18) {
         score = List.generate(18, (index) => 0);
@@ -230,7 +241,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _addPlayer() {
     setState(() {
-      playersControllers.add(List.generate(18, (index) => TextEditingController()));
+      playersControllers
+          .add(List.generate(18, (index) => TextEditingController()));
       playersScores.add(List.generate(18, (index) => 0));
       playersFocusNodes.add(List.generate(18, (index) => FocusNode()));
       nameControllers.add(TextEditingController());
@@ -267,7 +279,8 @@ class _HomeScreenState extends State<HomeScreen> {
       return Scaffold(
         appBar: AppBar(
           backgroundColor: const Color.fromARGB(255, 0, 120, 79),
-          title: const Text('Loading...', style: TextStyle(color: Colors.white)),
+          title:
+              const Text('Loading...', style: TextStyle(color: Colors.white)),
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -330,7 +343,8 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   controller: scrollController,
                   physics: const ClampingScrollPhysics(),
                   child: Column(
@@ -348,10 +362,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.only(
-                                    topLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
-                                    topRight: index == 17 ? const Radius.circular(12) : Radius.zero,
-                                    bottomLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
-                                    bottomRight: index == 17 ? const Radius.circular(12) : Radius.zero,
+                                    topLeft: index == 0
+                                        ? const Radius.circular(12)
+                                        : Radius.zero,
+                                    topRight: index == 17
+                                        ? const Radius.circular(12)
+                                        : Radius.zero,
+                                    bottomLeft: index == 0
+                                        ? const Radius.circular(12)
+                                        : Radius.zero,
+                                    bottomRight: index == 17
+                                        ? const Radius.circular(12)
+                                        : Radius.zero,
                                   ),
                                 ),
                                 child: Center(
@@ -360,25 +382,32 @@ class _HomeScreenState extends State<HomeScreen> {
                                       const SizedBox(height: 5),
                                       Text(
                                         'Hole ${index + 1}',
-                                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 20),
+                                        style: const TextStyle(
+                                            color: Colors.black,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 20),
                                       ),
                                       Text(
                                         'Par ${par[index]}',
-                                        style: const TextStyle(color: Colors.black),
+                                        style: const TextStyle(
+                                            color: Colors.black),
                                       ),
                                       Text(
                                         '${yardages[selectedTee]?[index] ?? 0} yards',
-                                        style: const TextStyle(color: Colors.black),
+                                        style: const TextStyle(
+                                            color: Colors.black),
                                       ),
                                       if (mensHandicap == true)
                                         Text(
                                           'HCap: ${mensHcap[index]}',
-                                          style: const TextStyle(color: Colors.black),
+                                          style: const TextStyle(
+                                              color: Colors.black),
                                         ),
                                       if (mensHandicap == false)
                                         Text(
                                           'HCap: ${womensHcap[index]}',
-                                          style: const TextStyle(color: Colors.black),
+                                          style: const TextStyle(
+                                              color: Colors.black),
                                         ),
                                     ],
                                   ),
@@ -392,9 +421,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       ...playersControllers.asMap().entries.map((entry) {
                         int playerIndex = entry.key;
                         List<TextEditingController> controllers = entry.value;
-                        List<FocusNode> focusNodes = playersFocusNodes[playerIndex];
+                        List<FocusNode> focusNodes =
+                            playersFocusNodes[playerIndex];
                         List<int> scores = playersScores[playerIndex];
-                        TextEditingController nameController = nameControllers[playerIndex];
+                        TextEditingController nameController =
+                            nameControllers[playerIndex];
                         return PlayerRow(
                           score: scores,
                           fairwaysHit: fairwaysHit,
@@ -420,10 +451,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.only(
-                                      topLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
-                                      topRight: index == 17 ? const Radius.circular(12) : Radius.zero,
-                                      bottomLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
-                                      bottomRight: index == 17 ? const Radius.circular(12) : Radius.zero,
+                                      topLeft: index == 0
+                                          ? const Radius.circular(12)
+                                          : Radius.zero,
+                                      topRight: index == 17
+                                          ? const Radius.circular(12)
+                                          : Radius.zero,
+                                      bottomLeft: index == 0
+                                          ? const Radius.circular(12)
+                                          : Radius.zero,
+                                      bottomRight: index == 17
+                                          ? const Radius.circular(12)
+                                          : Radius.zero,
                                     ),
                                   ),
                                   child: Column(
@@ -432,10 +471,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                         SizedBox(
                                           height: 35,
                                           child: TextButton(
-                                            onPressed: () => _toggleFairway(index),
+                                            onPressed: () =>
+                                                _toggleFairway(index),
                                             child: Text(
                                               'Fairway',
-                                              style: TextStyle(fontSize: 13, color: fairwaysHit[index] == 1 ? Colors.green : Colors.red),
+                                              style: TextStyle(
+                                                  fontSize: 13,
+                                                  color: fairwaysHit[index] == 1
+                                                      ? Colors.green
+                                                      : Colors.red),
                                             ),
                                           ),
                                         ),
@@ -443,10 +487,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                         SizedBox(
                                           height: 35,
                                           child: TextButton(
-                                            onPressed: () => _toggleGreen(index),
+                                            onPressed: () =>
+                                                _toggleGreen(index),
                                             child: Text(
                                               'Green',
-                                              style: TextStyle(fontSize: 13, color: greensHit[index] == 1 ? Colors.green : Colors.red),
+                                              style: TextStyle(
+                                                  fontSize: 13,
+                                                  color: greensHit[index] == 1
+                                                      ? Colors.green
+                                                      : Colors.red),
                                             ),
                                           ),
                                         ),
@@ -454,10 +503,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                         SizedBox(
                                           height: 70,
                                           child: TextButton(
-                                            onPressed: () => _toggleGreen(index),
+                                            onPressed: () =>
+                                                _toggleGreen(index),
                                             child: Text(
                                               'Green',
-                                              style: TextStyle(fontSize: 13, color: greensHit[index] == 1 ? Colors.green : Colors.red),
+                                              style: TextStyle(
+                                                  fontSize: 13,
+                                                  color: greensHit[index] == 1
+                                                      ? Colors.green
+                                                      : Colors.red),
                                             ),
                                           ),
                                         ),
@@ -472,59 +526,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 SizedBox(height: showFairwayGreen ? 144 - 140 : 214 - 190),
-                // Container(
-                //   height: 60,
-                //   decoration: BoxDecoration(
-                //     color: Colors.grey[200], // Use the color within BoxDecoration
-                //     borderRadius: BorderRadius.circular(12), // Add rounded corners
-                //   ),
-                //   child: Row(
-                //     children: [
-                //       Padding(
-                //         padding: const EdgeInsets.only(left: 8.0),
-                //         child: Column(
-                //           children: [
-                //             // const SizedBox(width: 80),
-                //             Text(
-                //               'Front: $frontNineScore',
-                //               style: const TextStyle(fontSize: 20),
-                //             ),
-                //             // const SizedBox(height: 10),
-                //             Text(
-                //               'Back: $backNineScore',
-                //               style: const TextStyle(fontSize: 20),
-                //             ),
-                //           ],
-                //         ),
-                //       ),
-                //       const Spacer(),
-                //       Padding(
-                //         padding: const EdgeInsets.only(right: 8.0),
-                //         child: Column(
-                //           children: [
-                //             if (!score.contains(0))
-                //               Text(
-                //                 '${(frontNineScore + backNineScore) - (frontNinePar + backNinePar) < 0 ? '-' : '+'}${((frontNineScore + backNineScore) - (frontNinePar + backNinePar)).abs()}',
-                //                 style: TextStyle(
-                //                     fontSize: 20,
-                //                     color: (frontNineScore + backNineScore) - (frontNinePar + backNinePar) < 0
-                //                         ? const Color.fromARGB(255, 0, 120, 79)
-                //                         : Colors.black),
-                //               ),
-                //             Text(
-                //               'Total: ${frontNineScore + backNineScore}',
-                //               style: TextStyle(
-                //                   fontSize: 20,
-                //                   color: (frontNineScore + backNineScore) - (frontNinePar + backNinePar) < 0
-                //                       ? const Color.fromARGB(255, 0, 120, 79)
-                //                       : Colors.black),
-                //             ),
-                //           ],
-                //         ),
-                //       ),
-                //     ],
-                //   ),
-                // ),
               ],
             ),
           ),
@@ -536,15 +537,53 @@ class _HomeScreenState extends State<HomeScreen> {
           height: 62,
           child: Row(
             children: <Widget>[
-              IconButton(
-                  onPressed: () {
-                    _addPlayer();
-                  },
-                  icon: const Icon(Icons.add)),
+              GestureDetector(
+                onTap: () {
+                  _addPlayer();
+                },
+                onLongPress: () {
+                  showCupertinoModalPopup(
+                    context: context,
+                    builder: (BuildContext context) => CupertinoActionSheet(
+                      title: const Text('Add Player or Putt Counter'),
+                      message: const Text('Choose an option.'),
+                      actions: [
+                        CupertinoActionSheetAction(
+                          onPressed: () {
+                            _addPlayer();
+                            Navigator.pop(context);
+                          },
+                          child: const Text('Add Player'),
+                        ),
+                        CupertinoActionSheetAction(
+                          onPressed: () {
+                            // _addPutterRow();
+                            Navigator.pop(context);
+                          },
+                          child: const Text('Add Putt Counter'),
+                        ),
+                      ],
+                      cancelButton: CupertinoActionSheetAction(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                  );
+                },
+                child: const Row(
+                  children: [
+                    SizedBox(width: 8),
+                    Icon(Icons.add),
+                  ],
+                ),
+              ),
 
               if (showFairwayGreen)
                 Padding(
-                  padding: const EdgeInsets.only(left: 12.0), // Padding to push it closer to the left edg
+                  padding: const EdgeInsets.only(
+                      left: 12.0), // Padding to push it closer to the left edg
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -567,14 +606,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     context: context,
                     builder: (BuildContext context) => CupertinoAlertDialog(
                       title: const Text('Reset'),
-                      content: const Text('Are you sure you want to reset the scores?'),
+                      content: const Text(
+                          'Are you sure you want to reset the scores?'),
                       actions: [
                         CupertinoDialogAction(
                           onPressed: () {
                             _resetValues();
                             Navigator.pop(context);
                           },
-                          child: const Text('Reset', style: TextStyle(fontSize: 20, color: Colors.red)),
+                          child: const Text('Reset',
+                              style:
+                                  TextStyle(fontSize: 20, color: Colors.red)),
                         ),
                         CupertinoDialogAction(
                           onPressed: () {
@@ -586,7 +628,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                 },
-                child: const Text('Reset', style: TextStyle(fontSize: 20, color: Colors.red)),
+                child: const Text('Reset',
+                    style: TextStyle(fontSize: 20, color: Colors.red)),
               ),
             ],
           ),
