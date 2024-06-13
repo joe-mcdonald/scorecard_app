@@ -2,6 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:scorecard_app/widgets/course_action_sheet.dart';
 import 'package:scorecard_app/widgets/player_row.dart';
+import 'package:scorecard_app/widgets/putts_row.dart';
+
 import 'package:scorecard_app/widgets/settings_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -31,14 +33,22 @@ class _HomeScreenState extends State<HomeScreen> {
     TextEditingController(),
   ];
 
+  final List<TextEditingController> puttsControllers =
+      List.generate(18, (index) => TextEditingController());
+  List<int> puttsScores = List.generate(18, (index) => 0);
+  final List<FocusNode> puttsFocusNodes =
+      List.generate(18, (index) => FocusNode());
+
   bool isLoading = true;
   bool showFairwayGreen = false;
+  bool showPutterRow = false;
   bool mensHandicap = true;
+
   List<int> fairwaysHit = List.generate(18, (index) => 0);
   List<int> greensHit = List.generate(18, (index) => 0);
   int _selectedIndex = 0;
 
-  String selectedCourse = 'Shaughnessy';
+  String selectedCourse = 'Shaughnessy G&CC';
 
   List<int> par = [];
   List<String> tees = [];
@@ -63,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _loadSettings();
     _loadCourseData('shaughnessy').then((_) {
-      setState(() {}); // Trigger a rebuild after loading course data
+      setState(() {});
     });
     for (int i = 0; i < controllers.length; i++) {
       controllers[i].addListener(() {
@@ -77,11 +87,11 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     }
     _loadScores();
+    _loadPutts();
   }
 
   @override
   void dispose() {
-    scrollController.dispose();
     for (var focusNode in focusNodes) {
       focusNode.dispose();
     }
@@ -94,7 +104,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadCourseData(String course) async {
     final rawData = await rootBundle.loadString('assets/$course.csv');
     List<List<dynamic>> csvData = const CsvToListConverter().convert(rawData);
-
     setState(() {
       par = csvData[2].sublist(1).map((e) => e as int).toList();
       mensHcap = csvData[3].sublist(1).map((e) => e as int).toList();
@@ -135,6 +144,11 @@ class _HomeScreenState extends State<HomeScreen> {
     await prefs.setString('greensHit', jsonEncode(greensHit));
   }
 
+  Future<void> _savePutts() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('puttsScores', jsonEncode(puttsScores));
+  }
+
   Future<void> _loadScores() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -163,10 +177,28 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Future<void> _loadPutts() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      puttsScores =
+          (jsonDecode(prefs.getString('puttsScores') ?? '[]') as List<dynamic>)
+              .cast<int>();
+
+      if (puttsScores.isEmpty) {
+        puttsScores = List.generate(18, (index) => 0);
+      }
+      for (int i = 0; i < puttsControllers.length; i++) {
+        puttsControllers[i].text =
+            puttsScores[i] != 0 ? puttsScores[i].toString() : '';
+      }
+    });
+  }
+
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       showFairwayGreen = prefs.getBool('showFairwayGreen') ?? false;
+      showPutterRow = prefs.getBool('showPuttsPerHole') ?? false;
       mensHandicap = prefs.getBool('mensHandicap') ?? false;
     });
   }
@@ -175,13 +207,19 @@ class _HomeScreenState extends State<HomeScreen> {
     showModalBottomSheet(
       context: context,
       builder: (context) => const SettingsPage(),
-    ).then((_) => _loadSettings()); // Reload settings after closing the model
+    ).then((_) => _loadSettings());
   }
 
   void _toggleFairway(int index) {
     setState(() {
       fairwaysHit[index] = fairwaysHit[index] == 0 ? 1 : 0;
       _saveScores();
+    });
+  }
+
+  void _togglePutterRow() {
+    setState(() {
+      showPutterRow = !showPutterRow;
     });
   }
 
@@ -195,30 +233,27 @@ class _HomeScreenState extends State<HomeScreen> {
   void _resetValues() {
     setState(() {
       selectedTee = tees.isNotEmpty ? tees[0] : 'Whites';
-
-      // Reset scores for the first player only
       playersScores[0] = List.generate(18, (index) => 0);
       score = List.generate(18, (index) => 0);
-
-      // Clear text controllers for the first player only
       for (var controller in playersControllers[0]) {
         controller.clear();
       }
-
-      // Reset fairways and greens hit
       fairwaysHit = List.generate(18, (index) => 0);
       greensHit = List.generate(18, (index) => 0);
-
-      // Clear the name controller for the first player only
       nameControllers[0].clear();
-
-      // Remove all other players
       playersControllers.removeRange(1, playersControllers.length);
       playersScores.removeRange(1, playersScores.length);
       playersFocusNodes.removeRange(1, playersFocusNodes.length);
       nameControllers.removeRange(1, nameControllers.length);
 
+      puttsScores = List.generate(18, (index) => 0);
+      showPutterRow = false;
+      for (var controller in puttsControllers) {
+        controller.clear();
+      }
+
       _saveScores();
+      _savePutts();
     });
   }
 
@@ -246,6 +281,13 @@ class _HomeScreenState extends State<HomeScreen> {
       playersScores.add(List.generate(18, (index) => 0));
       playersFocusNodes.add(List.generate(18, (index) => FocusNode()));
       nameControllers.add(TextEditingController());
+    });
+  }
+
+  void _addPutter() {
+    setState(() {
+      showPutterRow = true;
+      _loadPutts();
     });
   }
 
@@ -437,6 +479,17 @@ class _HomeScreenState extends State<HomeScreen> {
                           scrollController: scrollController,
                         );
                       }),
+                      if (showPutterRow)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 104),
+                          child: PutterRow(
+                            putts: puttsScores,
+                            par: par,
+                            focusNodes: puttsFocusNodes,
+                            controllers: puttsControllers,
+                            scrollController: scrollController,
+                          ),
+                        ),
                       if (showFairwayGreen) // Conditionally render the row based on the switch state
                         Padding(
                           padding: const EdgeInsets.only(right: 20.0),
@@ -557,7 +610,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         CupertinoActionSheetAction(
                           onPressed: () {
-                            // _addPutterRow();
+                            _addPutter();
+                            // _togglePutterRow();
                             Navigator.pop(context);
                           },
                           child: const Text('Add Putt Counter'),

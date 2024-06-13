@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PutterRow extends StatefulWidget {
-  final List<int> score;
+  final List<int> putts;
   final List<int> par;
   final List<FocusNode> focusNodes;
   final List<TextEditingController> controllers;
@@ -11,7 +11,7 @@ class PutterRow extends StatefulWidget {
 
   const PutterRow({
     super.key,
-    required this.score,
+    required this.putts,
     required this.par,
     required this.focusNodes,
     required this.controllers,
@@ -23,9 +23,9 @@ class PutterRow extends StatefulWidget {
 }
 
 class _PutterRowState extends State<PutterRow> {
-  Future<void> _saveScores() async {
+  Future<void> _savePutts() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('score', jsonEncode(widget.score));
+    await prefs.setString('putts', jsonEncode(widget.putts));
   }
 
   Widget _buildTextField(int index) {
@@ -33,7 +33,7 @@ class _PutterRowState extends State<PutterRow> {
       alignment: Alignment.center,
       children: [
         Padding(
-          padding: const EdgeInsets.all(10), // Adjust padding as needed
+          padding: const EdgeInsets.all(10),
           child: GestureDetector(
             onTap: () {
               setState(() {
@@ -42,12 +42,9 @@ class _PutterRowState extends State<PutterRow> {
                   baseOffset: 0,
                   extentOffset: widget.controllers[index].text.length,
                 );
-
-                // Calculate the target scroll position
                 double screenWidth = MediaQuery.of(context).size.width;
-                double targetScrollPosition = (index * 105.0 + 10) -
-                    (screenWidth / 2 -
-                        100); // Assuming each item is 100 wide plus margin
+                double targetScrollPosition =
+                    (index * 105.0 + 10) - (screenWidth / 2 - 100);
 
                 widget.scrollController.animateTo(
                   targetScrollPosition,
@@ -64,12 +61,9 @@ class _PutterRowState extends State<PutterRow> {
                     baseOffset: 0,
                     extentOffset: widget.controllers[index].text.length,
                   );
-
-                  // Calculate the target scroll position
                   double screenWidth = MediaQuery.of(context).size.width;
-                  double targetScrollPosition = (index * 105.0 + 10) -
-                      (screenWidth / 2 -
-                          100); // Assuming each item is 100 wide plus margin
+                  double targetScrollPosition =
+                      (index * 105.0 + 10) - (screenWidth / 2 - 100);
 
                   widget.scrollController.animateTo(
                     targetScrollPosition,
@@ -84,29 +78,25 @@ class _PutterRowState extends State<PutterRow> {
                 int? value = int.tryParse(text);
                 if (value != null) {
                   setState(() {
-                    widget.score[index] = value;
-                    _saveScores();
+                    widget.putts[index] = value;
+                    _savePutts();
                   });
                 } else {
                   setState(() {
-                    widget.score[index] = 0;
-                    _saveScores();
+                    widget.putts[index] = 0;
+                    _savePutts();
                   });
                 }
               },
               decoration: InputDecoration(
                 hintText: '${widget.par[index]}',
-                hintStyle: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 30), // Adjust font size as needed
+                hintStyle: const TextStyle(color: Colors.grey, fontSize: 30),
                 border: InputBorder.none,
-                contentPadding: EdgeInsets.zero, // Remove default padding
+                contentPadding: EdgeInsets.zero,
               ),
               keyboardType: TextInputType.number,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 30), // Adjust font size as needed
+              style: const TextStyle(color: Colors.black, fontSize: 30),
             ),
           ),
         ),
@@ -130,10 +120,11 @@ class _PutterRowState extends State<PutterRow> {
               bottomLeft: Radius.circular(12),
             ),
           ),
-          child: Center(
+          child: const Center(
             child: Text(
               'Putts',
-              style: const TextStyle(color: Colors.black, fontSize: 20),
+              style: TextStyle(color: Colors.black, fontSize: 20),
+              textAlign: TextAlign.center,
             ),
           ),
         ),
@@ -159,41 +150,44 @@ class _PutterRowState extends State<PutterRow> {
             ),
           );
         }),
-        Container(
-          width: 100,
-          height: 80,
-          margin: const EdgeInsets.all(2),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topRight: Radius.circular(12),
-              bottomRight: Radius.circular(12),
-            ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'F: ${widget.score.sublist(0, 9).reduce((a, b) => a + b)}',
-                style: const TextStyle(color: Colors.black, fontSize: 16),
-                textAlign: TextAlign.left,
-              ),
-              Text(
-                'B: ${widget.score.sublist(9, 18).reduce((a, b) => a + b)}',
-                style: const TextStyle(color: Colors.black, fontSize: 16),
-                textAlign: TextAlign.left,
-              ),
-              Text(
-                'T: ${widget.score.sublist(0, 9).reduce((a, b) => a + b) + widget.score.sublist(9, 18).reduce((a, b) => a + b)}',
-                style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold),
-                textAlign: TextAlign.left,
-              ),
-            ],
-          ),
-        ),
+
+        // TODO: turn this column into a 'average putts per hole' column
+
+        // Container(
+        //   width: 100,
+        //   height: 80,
+        //   margin: const EdgeInsets.all(2),
+        //   decoration: const BoxDecoration(
+        //     color: Colors.white,
+        //     borderRadius: BorderRadius.only(
+        //       topRight: Radius.circular(12),
+        //       bottomRight: Radius.circular(12),
+        //     ),
+        //   ),
+        //   child: Column(
+        //     mainAxisAlignment: MainAxisAlignment.center,
+        //     children: [
+        //       Text(
+        //         'F: ${widget.score.sublist(0, 9).reduce((a, b) => a + b)}',
+        //         style: const TextStyle(color: Colors.black, fontSize: 16),
+        //         textAlign: TextAlign.left,
+        //       ),
+        //       Text(
+        //         'B: ${widget.score.sublist(9, 18).reduce((a, b) => a + b)}',
+        //         style: const TextStyle(color: Colors.black, fontSize: 16),
+        //         textAlign: TextAlign.left,
+        //       ),
+        //       Text(
+        //         'T: ${widget.score.sublist(0, 9).reduce((a, b) => a + b) + widget.score.sublist(9, 18).reduce((a, b) => a + b)}',
+        //         style: const TextStyle(
+        //             color: Colors.black,
+        //             fontSize: 16,
+        //             fontWeight: FontWeight.bold),
+        //         textAlign: TextAlign.left,
+        //       ),
+        //     ],
+        //   ),
+        // ),
       ],
     );
   }

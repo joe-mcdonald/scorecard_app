@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:scorecard_app/home_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PlayerRow extends StatefulWidget {
@@ -42,7 +41,7 @@ class _PlayerRowState extends State<PlayerRow> {
       alignment: Alignment.center,
       children: [
         Padding(
-          padding: const EdgeInsets.all(10), // Adjust padding as needed
+          padding: const EdgeInsets.all(10),
           child: GestureDetector(
             onTap: () {
               setState(() {
@@ -51,11 +50,9 @@ class _PlayerRowState extends State<PlayerRow> {
                   baseOffset: 0,
                   extentOffset: widget.controllers[index].text.length,
                 );
-
-                // Calculate the target scroll position
                 double screenWidth = MediaQuery.of(context).size.width;
-                double targetScrollPosition = (index * 105.0 + 10) - (screenWidth / 2 - 100); // Assuming each item is 100 wide plus margin
-
+                double targetScrollPosition =
+                    (index * 105.0 + 10) - (screenWidth / 2 - 100);
                 widget.scrollController.animateTo(
                   targetScrollPosition,
                   duration: const Duration(milliseconds: 50),
@@ -71,11 +68,9 @@ class _PlayerRowState extends State<PlayerRow> {
                     baseOffset: 0,
                     extentOffset: widget.controllers[index].text.length,
                   );
-
-                  // Calculate the target scroll position
                   double screenWidth = MediaQuery.of(context).size.width;
-                  double targetScrollPosition = (index * 105.0 + 10) - (screenWidth / 2 - 100); // Assuming each item is 100 wide plus margin
-
+                  double targetScrollPosition =
+                      (index * 105.0 + 10) - (screenWidth / 2 - 100);
                   widget.scrollController.animateTo(
                     targetScrollPosition,
                     duration: const Duration(milliseconds: 10),
@@ -101,20 +96,21 @@ class _PlayerRowState extends State<PlayerRow> {
               },
               decoration: InputDecoration(
                 hintText: '${widget.par[index]}',
-                hintStyle: const TextStyle(color: Colors.grey, fontSize: 30), // Adjust font size as needed
+                hintStyle: const TextStyle(color: Colors.grey, fontSize: 30),
                 border: InputBorder.none,
-                contentPadding: EdgeInsets.zero, // Remove default padding
+                contentPadding: EdgeInsets.zero,
               ),
               keyboardType: TextInputType.number,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.black, fontSize: 30), // Adjust font size as needed
+              style: const TextStyle(color: Colors.black, fontSize: 30),
             ),
           ),
         ),
         Positioned.fill(
           child: IgnorePointer(
             child: CustomPaint(
-              painter: _ShapePainter(widget.par[index], int.tryParse(widget.controllers[index].text)),
+              painter: _ShapePainter(widget.par[index],
+                  int.tryParse(widget.controllers[index].text)),
             ),
           ),
         ),
@@ -160,7 +156,8 @@ class _PlayerRowState extends State<PlayerRow> {
               color: Colors.white,
               borderRadius: BorderRadius.only(
                 topLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
-                bottomLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
+                bottomLeft:
+                    index == 0 ? const Radius.circular(12) : Radius.zero,
               ),
             ),
             child: Center(
@@ -198,7 +195,10 @@ class _PlayerRowState extends State<PlayerRow> {
               ),
               Text(
                 'T: ${widget.score.sublist(0, 9).reduce((a, b) => a + b) + widget.score.sublist(9, 18).reduce((a, b) => a + b)}',
-                style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold),
                 textAlign: TextAlign.left,
               ),
             ],
@@ -219,11 +219,6 @@ class _ShapePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (score == null) return;
 
-    final paint = Paint()
-      ..color = Colors.black
-      ..style = PaintingStyle.stroke // Use stroke to create outlines
-      ..strokeWidth = 3.0; // Make circles thicker to match squares
-
     int difference = score! - par;
 
     if (difference <= -2) {
@@ -238,12 +233,16 @@ class _ShapePainter extends CustomPainter {
   }
 
   void _drawCircles(Canvas canvas, Size size, int count) {
-    final radius = size.width / 3; // Adjust radius to ensure circles are smaller
+    final radius =
+        size.width / 3; // Adjust radius to ensure circles are smaller
     final center = Offset(size.width / 2, size.height / 2);
 
     for (int i = 0; i < count; i++) {
       final offset = Offset(
-        center.dx + (i - (count - 1) / 2) * radius * 0, // Further reduce the offset to fully overlap circles
+        center.dx +
+            (i - (count - 1) / 2) *
+                radius *
+                0, // Further reduce the offset to fully overlap circles
         center.dy,
       );
       canvas.drawCircle(
@@ -265,9 +264,11 @@ class _ShapePainter extends CustomPainter {
       ..strokeWidth = 3.0; // Make squares thicker
 
     for (int i = 0; i < count; i++) {
-      final halfSize = size.width / 5 * (1 - 0.3 * i); // smaller size to fit within grid
+      final halfSize =
+          size.width / 5 * (1 - 0.3 * i); // smaller size to fit within grid
       canvas.drawRect(
-        Rect.fromCenter(center: center, width: halfSize * 3, height: halfSize * 3),
+        Rect.fromCenter(
+            center: center, width: halfSize * 3, height: halfSize * 3),
         paint,
       );
     }

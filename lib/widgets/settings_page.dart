@@ -13,6 +13,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   bool showFairwayGreen = false;
+  bool showPuttsPerHole = false;
   bool showMensHandicap = true;
   Timer? _popupTimer;
 
@@ -26,21 +27,23 @@ class _SettingsPageState extends State<SettingsPage> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       showFairwayGreen = prefs.getBool('showFairwayGreen') ?? false;
+      showPuttsPerHole = prefs.getBool('showPuttsPerHole') ?? false;
       showMensHandicap = prefs.getBool('mensHandicap') ?? true;
     });
   }
 
-  Future<void> _saveSettings(bool showFairwayGreenValue, bool mensHandicapValue) async {
+  Future<void> _saveSettings(bool showFairwayGreenValue,
+      bool showPuttsPerHoleValue, bool mensHandicapValue) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('showFairwayGreen', showFairwayGreenValue);
-    await prefs.setBool('mensHandicap', mensHandicapValue); //men = true, women = false
+    await prefs.setBool('showPuttsPerHole', showPuttsPerHoleValue);
+    await prefs.setBool('mensHandicap', mensHandicapValue);
   }
 
   void _showPopup() {
     final overlay = Overlay.of(context)?.context.findRenderObject();
     final overlayBox = overlay as RenderBox;
     final offset = overlayBox.localToGlobal(Offset.zero);
-
     final entry = OverlayEntry(
       builder: (context) => Positioned(
         top: offset.dy + 300,
@@ -98,7 +101,27 @@ class _SettingsPageState extends State<SettingsPage> {
                 onChanged: (bool showFairwayGreenValue) {
                   setState(() {
                     showFairwayGreen = showFairwayGreenValue;
-                    _saveSettings(showFairwayGreenValue, showMensHandicap);
+                    _saveSettings(showFairwayGreenValue, showPuttsPerHole,
+                        showMensHandicap);
+                  });
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              GestureDetector(
+                child: const Text('Show Putts Per Hole'),
+              ),
+              CupertinoSwitch(
+                value: showPuttsPerHole,
+                onChanged: (bool showPuttsPerHoleValue) {
+                  setState(() {
+                    showPuttsPerHole = showPuttsPerHoleValue;
+                    _saveSettings(showFairwayGreen, showPuttsPerHoleValue,
+                        showMensHandicap);
                   });
                 },
               ),
@@ -117,7 +140,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 onChanged: (bool showMensHandicapValue) {
                   setState(() {
                     showMensHandicap = showMensHandicapValue;
-                    _saveSettings(showFairwayGreen, showMensHandicapValue);
+                    _saveSettings(showFairwayGreen, showPuttsPerHole,
+                        showMensHandicapValue);
                   });
                 },
               ),
