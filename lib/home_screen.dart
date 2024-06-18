@@ -24,21 +24,19 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<List<TextEditingController>> playersControllers = [
     List.generate(18, (index) => TextEditingController()),
   ];
-  final List<List<int>> playersScores = [
+  List<List<int>> playersScores = [
     List.generate(18, (index) => 0),
   ];
   final List<List<FocusNode>> playersFocusNodes = [
     List.generate(18, (index) => FocusNode()),
   ];
-  final List<TextEditingController> nameControllers = [
+  List<TextEditingController> nameControllers = [
     TextEditingController(),
   ];
 
-  final List<TextEditingController> puttsControllers =
-      List.generate(18, (index) => TextEditingController());
+  final List<TextEditingController> puttsControllers = List.generate(18, (index) => TextEditingController());
   List<int> puttsScores = List.generate(18, (index) => 0);
-  final List<FocusNode> puttsFocusNodes =
-      List.generate(18, (index) => FocusNode());
+  final List<FocusNode> puttsFocusNodes = List.generate(18, (index) => FocusNode());
 
   bool isLoading = true;
   bool showFairwayGreen = false;
@@ -65,8 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int get frontNinePar => par.sublist(0, 9).reduce((a, b) => a + b);
   int get backNinePar => par.sublist(9, 18).reduce((a, b) => a + b);
 
-  List<TextEditingController> controllers =
-      List.generate(18, (index) => TextEditingController());
+  List<TextEditingController> controllers = List.generate(18, (index) => TextEditingController());
   List<FocusNode> focusNodes = List.generate(18, (index) => FocusNode());
 
   @override
@@ -89,16 +86,28 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     _loadScores();
     _loadPutts();
+    _loadSavedState();
   }
 
   @override
   void dispose() {
-    for (var focusNode in focusNodes) {
+    _saveState();
+    // for (var focusNode in focusNodes) {
+    //   focusNode.dispose();
+    // }
+    // for (var controller in controllers) {
+    //   controller.dispose();
+    // }
+    for (var focusNode in puttsFocusNodes) {
       focusNode.dispose();
     }
-    for (var controller in controllers) {
+    for (var controller in puttsControllers) {
       controller.dispose();
     }
+    for (var controller in nameControllers) {
+      controller.dispose();
+    }
+
     super.dispose();
   }
 
@@ -120,13 +129,8 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _onCourseDataLoaded(
-      List<int> loadedPar,
-      List<int> loadedMensHcap,
-      List<int> loadedWomensHcap,
-      List<String> loadedTees,
-      Map<String, List<int>> loadedYardages,
-      String loadedSelectedTee) {
+  void _onCourseDataLoaded(List<int> loadedPar, List<int> loadedMensHcap, List<int> loadedWomensHcap, List<String> loadedTees,
+      Map<String, List<int>> loadedYardages, String loadedSelectedTee) {
     setState(() {
       par = loadedPar;
       mensHcap = loadedMensHcap;
@@ -153,14 +157,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadScores() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      score = (jsonDecode(prefs.getString('score') ?? '[]') as List<dynamic>)
-          .cast<int>();
-      fairwaysHit =
-          (jsonDecode(prefs.getString('fairwaysHit') ?? '[]') as List<dynamic>)
-              .cast<int>();
-      greensHit =
-          (jsonDecode(prefs.getString('greensHit') ?? '[]') as List<dynamic>)
-              .cast<int>();
+      score = (jsonDecode(prefs.getString('score') ?? '[]') as List<dynamic>).cast<int>();
+      fairwaysHit = (jsonDecode(prefs.getString('fairwaysHit') ?? '[]') as List<dynamic>).cast<int>();
+      greensHit = (jsonDecode(prefs.getString('greensHit') ?? '[]') as List<dynamic>).cast<int>();
 
       if (score.length != 18) {
         score = List.generate(18, (index) => 0);
@@ -181,18 +180,39 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadPutts() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      puttsScores =
-          (jsonDecode(prefs.getString('puttsScores') ?? '[]') as List<dynamic>)
-              .cast<int>();
+      puttsScores = (jsonDecode(prefs.getString('puttsScores') ?? '[]') as List<dynamic>).cast<int>();
 
       if (puttsScores.isEmpty) {
         puttsScores = List.generate(18, (index) => 0);
       }
       for (int i = 0; i < puttsControllers.length; i++) {
-        puttsControllers[i].text =
-            puttsScores[i] != 0 ? puttsScores[i].toString() : '';
+        puttsControllers[i].text = puttsScores[i] != 0 ? puttsScores[i].toString() : '';
       }
     });
+  }
+
+  Future<void> _loadSavedState() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      showPutterRow = prefs.getBool('showPuttsRow') ?? false;
+      puttsScores = (jsonDecode(prefs.getString('puttsScore') ?? '[]') as List<dynamic>).cast<int>();
+
+      selectedCourse = prefs.getString('selectedCourse') ?? '';
+
+      playersScores = (jsonDecode(prefs.getString('playerScores') ?? '[]') as List<dynamic>).map((e) => (e as List<dynamic>).cast<int>()).toList();
+
+      nameControllers =
+          (jsonDecode(prefs.getString('nameControllers') ?? '[]') as List<dynamic>).map((name) => TextEditingController(text: name)).toList();
+    });
+  }
+
+  Future<void> _saveState() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('showPuttsRow', showPutterRow);
+    await prefs.setString('puttsScore', jsonEncode(puttsScores));
+    await prefs.setString('selectedCourse', selectedCourse);
+    await prefs.setString('playerScores', jsonEncode(playersScores));
+    await prefs.setString('nameControllers', jsonEncode(nameControllers.map((controller) => controller.text).toList()));
   }
 
   Future<void> _loadSettings() async {
@@ -277,8 +297,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _addPlayer() {
     setState(() {
-      playersControllers
-          .add(List.generate(18, (index) => TextEditingController()));
+      playersControllers.add(List.generate(18, (index) => TextEditingController()));
       playersScores.add(List.generate(18, (index) => 0));
       playersFocusNodes.add(List.generate(18, (index) => FocusNode()));
       nameControllers.add(TextEditingController());
@@ -330,8 +349,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return Scaffold(
         appBar: AppBar(
           backgroundColor: const Color.fromARGB(255, 0, 120, 79),
-          title:
-              const Text('Loading...', style: TextStyle(color: Colors.white)),
+          title: const Text('Loading...', style: TextStyle(color: Colors.white)),
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -394,8 +412,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                   controller: scrollController,
                   physics: const ClampingScrollPhysics(),
                   child: Column(
@@ -413,18 +430,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.only(
-                                    topLeft: index == 0
-                                        ? const Radius.circular(12)
-                                        : Radius.zero,
-                                    topRight: index == 17
-                                        ? const Radius.circular(12)
-                                        : Radius.zero,
-                                    bottomLeft: index == 0
-                                        ? const Radius.circular(12)
-                                        : Radius.zero,
-                                    bottomRight: index == 17
-                                        ? const Radius.circular(12)
-                                        : Radius.zero,
+                                    topLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
+                                    topRight: index == 17 ? const Radius.circular(12) : Radius.zero,
+                                    bottomLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
+                                    bottomRight: index == 17 ? const Radius.circular(12) : Radius.zero,
                                   ),
                                 ),
                                 child: Center(
@@ -433,36 +442,25 @@ class _HomeScreenState extends State<HomeScreen> {
                                       const SizedBox(height: 5),
                                       Text(
                                         'Hole ${index + 1}',
-                                        style: TextStyle(
-                                            color: Colors.black,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 20 * scaleFactor),
+                                        style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 20 * scaleFactor),
                                       ),
                                       Text(
                                         'Par ${par[index]}',
-                                        style: TextStyle(
-                                            color: Colors.black,
-                                            fontSize: 14 * scaleFactor),
+                                        style: TextStyle(color: Colors.black, fontSize: 14 * scaleFactor),
                                       ),
                                       Text(
                                         '${yardages[selectedTee]?[index] ?? 0} yards',
-                                        style: TextStyle(
-                                            color: Colors.black,
-                                            fontSize: 14 * scaleFactor),
+                                        style: TextStyle(color: Colors.black, fontSize: 14 * scaleFactor),
                                       ),
                                       if (mensHandicap == true)
                                         Text(
                                           'HCap: ${mensHcap[index]}',
-                                          style: TextStyle(
-                                              color: Colors.black,
-                                              fontSize: 14 * scaleFactor),
+                                          style: TextStyle(color: Colors.black, fontSize: 14 * scaleFactor),
                                         ),
                                       if (mensHandicap == false)
                                         Text(
                                           'HCap: ${womensHcap[index]}',
-                                          style: TextStyle(
-                                              color: Colors.black,
-                                              fontSize: 14 * scaleFactor),
+                                          style: TextStyle(color: Colors.black, fontSize: 14 * scaleFactor),
                                         ),
                                     ],
                                   ),
@@ -473,25 +471,39 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       const SizedBox(height: 5),
-                      ...playersControllers.asMap().entries.map((entry) {
-                        int playerIndex = entry.key;
-                        List<TextEditingController> controllers = entry.value;
-                        List<FocusNode> focusNodes =
-                            playersFocusNodes[playerIndex];
-                        List<int> scores = playersScores[playerIndex];
-                        TextEditingController nameController =
-                            nameControllers[playerIndex];
+                      // Player rows
+                      ...playersScores.asMap().entries.map((entry) {
+                        int index = entry.key;
+                        List<int> playerScore = entry.value;
                         return PlayerRow(
-                          score: scores,
+                          score: score,
                           fairwaysHit: fairwaysHit,
                           greensHit: greensHit,
                           par: par,
                           focusNodes: focusNodes,
                           controllers: controllers,
-                          nameController: nameController,
+                          nameController: nameControllers[index],
                           scrollController: scrollController,
                         );
-                      }),
+                      }).toList(),
+                      // ...playersControllers.asMap().entries.map((entry) {
+                      //   int playerIndex = entry.key;
+                      //   List<TextEditingController> controllers = entry.value;
+                      //   List<FocusNode> focusNodes = playersFocusNodes[playerIndex];
+                      //   List<int> scores = playersScores[playerIndex];
+                      //   TextEditingController nameController = nameControllers[playerIndex];
+                      //   return PlayerRow(
+                      //     score: scores,
+                      //     fairwaysHit: fairwaysHit,
+                      //     greensHit: greensHit,
+                      //     par: par,
+                      //     focusNodes: focusNodes,
+                      //     controllers: controllers,
+                      //     nameController: nameController,
+                      //     // nameController: TextEditingController(),
+                      //     scrollController: scrollController,
+                      //   );
+                      // }),
                       if (showPutterRow)
                         Padding(
                           padding: EdgeInsets.only(left: 0 * scaleFactor),
@@ -517,18 +529,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.only(
-                                      topLeft: index == 0
-                                          ? const Radius.circular(12)
-                                          : Radius.zero,
-                                      topRight: index == 17
-                                          ? const Radius.circular(12)
-                                          : Radius.zero,
-                                      bottomLeft: index == 0
-                                          ? const Radius.circular(12)
-                                          : Radius.zero,
-                                      bottomRight: index == 17
-                                          ? const Radius.circular(12)
-                                          : Radius.zero,
+                                      topLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
+                                      topRight: index == 17 ? const Radius.circular(12) : Radius.zero,
+                                      bottomLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
+                                      bottomRight: index == 17 ? const Radius.circular(12) : Radius.zero,
                                     ),
                                   ),
                                   child: Column(
@@ -537,15 +541,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                         SizedBox(
                                           height: 35 * scaleFactor,
                                           child: TextButton(
-                                            onPressed: () =>
-                                                _toggleFairway(index),
+                                            onPressed: () => _toggleFairway(index),
                                             child: Text(
                                               'Fairway',
                                               style: TextStyle(
                                                 fontSize: 13 * scaleFactor,
-                                                color: fairwaysHit[index] == 1
-                                                    ? Colors.green
-                                                    : Colors.red,
+                                                color: fairwaysHit[index] == 1 ? Colors.green : Colors.red,
                                               ),
                                             ),
                                           ),
@@ -554,15 +555,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                         SizedBox(
                                           height: 35 * scaleFactor,
                                           child: TextButton(
-                                            onPressed: () =>
-                                                _toggleGreen(index),
+                                            onPressed: () => _toggleGreen(index),
                                             child: Text(
                                               'Green',
                                               style: TextStyle(
                                                 fontSize: 13 * scaleFactor,
-                                                color: greensHit[index] == 1
-                                                    ? Colors.green
-                                                    : Colors.red,
+                                                color: greensHit[index] == 1 ? Colors.green : Colors.red,
                                               ),
                                             ),
                                           ),
@@ -571,15 +569,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                         SizedBox(
                                           height: 70 * scaleFactor,
                                           child: TextButton(
-                                            onPressed: () =>
-                                                _toggleGreen(index),
+                                            onPressed: () => _toggleGreen(index),
                                             child: Text(
                                               'Green',
                                               style: TextStyle(
                                                 fontSize: 13 * scaleFactor,
-                                                color: greensHit[index] == 1
-                                                    ? Colors.green
-                                                    : Colors.red,
+                                                color: greensHit[index] == 1 ? Colors.green : Colors.red,
                                               ),
                                             ),
                                           ),
@@ -655,8 +650,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
               if (showFairwayGreen)
                 Padding(
-                  padding: const EdgeInsets.only(
-                      left: 12.0), // Padding to push it closer to the left edg
+                  padding: const EdgeInsets.only(left: 12.0), // Padding to push it closer to the left edg
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
