@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:scorecard_app/scale_factor_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PutterRow extends StatefulWidget {
@@ -28,12 +30,12 @@ class _PutterRowState extends State<PutterRow> {
     await prefs.setString('putts', jsonEncode(widget.putts));
   }
 
-  Widget _buildTextField(int index) {
+  Widget _buildTextField(int index, double scaleFactor) {
     return Stack(
       alignment: Alignment.center,
       children: [
         Padding(
-          padding: const EdgeInsets.all(10),
+          padding: EdgeInsets.all(10 * scaleFactor),
           child: GestureDetector(
             onTap: () {
               setState(() {
@@ -89,14 +91,20 @@ class _PutterRowState extends State<PutterRow> {
                 }
               },
               decoration: InputDecoration(
-                hintText: '${widget.par[index]}',
-                hintStyle: const TextStyle(color: Colors.grey, fontSize: 30),
+                hintText: '2',
+                hintStyle: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 30 * scaleFactor,
+                ),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
               ),
               keyboardType: TextInputType.number,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.black, fontSize: 30),
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 30 * scaleFactor,
+              ),
             ),
           ),
         ),
@@ -106,11 +114,13 @@ class _PutterRowState extends State<PutterRow> {
 
   @override
   Widget build(BuildContext context) {
+    final scaleFactor = Provider.of<ScaleFactorProvider>(context).scaleFactor;
     return Row(
       children: [
         Container(
-          width: 80,
-          margin: const EdgeInsets.all(2),
+          width: 80 * scaleFactor,
+          padding: EdgeInsets.only(right: 10 * scaleFactor),
+          margin: EdgeInsets.all(2 * scaleFactor),
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.only(
@@ -120,19 +130,19 @@ class _PutterRowState extends State<PutterRow> {
               bottomLeft: Radius.circular(12),
             ),
           ),
-          child: const Center(
+          child: Center(
             child: Text(
               'Putts',
-              style: TextStyle(color: Colors.black, fontSize: 20),
+              style: TextStyle(color: Colors.black, fontSize: 20 * scaleFactor),
               textAlign: TextAlign.center,
             ),
           ),
         ),
         ...List.generate(18, (index) {
           return Container(
-            width: 100,
-            height: 80,
-            margin: const EdgeInsets.all(2),
+            width: 100 * scaleFactor,
+            height: 80 * scaleFactor,
+            margin: EdgeInsets.all(2 * scaleFactor),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.only(
@@ -145,7 +155,7 @@ class _PutterRowState extends State<PutterRow> {
               child: SizedBox(
                 width: double.infinity,
                 height: double.infinity,
-                child: _buildTextField(index),
+                child: _buildTextField(index, scaleFactor),
               ),
             ),
           );
@@ -153,41 +163,22 @@ class _PutterRowState extends State<PutterRow> {
 
         // TODO: turn this column into a 'average putts per hole' column
 
-        // Container(
-        //   width: 100,
-        //   height: 80,
-        //   margin: const EdgeInsets.all(2),
-        //   decoration: const BoxDecoration(
-        //     color: Colors.white,
-        //     borderRadius: BorderRadius.only(
-        //       topRight: Radius.circular(12),
-        //       bottomRight: Radius.circular(12),
-        //     ),
-        //   ),
-        //   child: Column(
-        //     mainAxisAlignment: MainAxisAlignment.center,
-        //     children: [
-        //       Text(
-        //         'F: ${widget.score.sublist(0, 9).reduce((a, b) => a + b)}',
-        //         style: const TextStyle(color: Colors.black, fontSize: 16),
-        //         textAlign: TextAlign.left,
-        //       ),
-        //       Text(
-        //         'B: ${widget.score.sublist(9, 18).reduce((a, b) => a + b)}',
-        //         style: const TextStyle(color: Colors.black, fontSize: 16),
-        //         textAlign: TextAlign.left,
-        //       ),
-        //       Text(
-        //         'T: ${widget.score.sublist(0, 9).reduce((a, b) => a + b) + widget.score.sublist(9, 18).reduce((a, b) => a + b)}',
-        //         style: const TextStyle(
-        //             color: Colors.black,
-        //             fontSize: 16,
-        //             fontWeight: FontWeight.bold),
-        //         textAlign: TextAlign.left,
-        //       ),
-        //     ],
-        //   ),
-        // ),
+        Container(
+          width: 100 * scaleFactor,
+          height: 80 * scaleFactor,
+          margin: EdgeInsets.all(2 * scaleFactor),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topRight: Radius.circular(12),
+              bottomRight: Radius.circular(12),
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [],
+          ),
+        ),
       ],
     );
   }

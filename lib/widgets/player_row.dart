@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:scorecard_app/scale_factor_provider.dart';
 
 class PlayerRow extends StatefulWidget {
   final List<int> score;
@@ -36,12 +38,12 @@ class _PlayerRowState extends State<PlayerRow> {
     await prefs.setString('greensHit', jsonEncode(widget.greensHit));
   }
 
-  Widget _buildTextField(int index) {
+  Widget _buildTextField(int index, double scaleFactor) {
     return Stack(
       alignment: Alignment.center,
       children: [
         Padding(
-          padding: const EdgeInsets.all(10),
+          padding: EdgeInsets.all(10 * scaleFactor),
           child: GestureDetector(
             onTap: () {
               setState(() {
@@ -52,7 +54,7 @@ class _PlayerRowState extends State<PlayerRow> {
                 );
                 double screenWidth = MediaQuery.of(context).size.width;
                 double targetScrollPosition =
-                    (index * 105.0 + 10) - (screenWidth / 2 - 100);
+                    ((index * 105.0 + 10) - (screenWidth / 2 - 100));
                 widget.scrollController.animateTo(
                   targetScrollPosition,
                   duration: const Duration(milliseconds: 50),
@@ -96,13 +98,14 @@ class _PlayerRowState extends State<PlayerRow> {
               },
               decoration: InputDecoration(
                 hintText: '${widget.par[index]}',
-                hintStyle: const TextStyle(color: Colors.grey, fontSize: 30),
+                hintStyle:
+                    TextStyle(color: Colors.grey, fontSize: 30 * scaleFactor),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
               ),
               keyboardType: TextInputType.number,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.black, fontSize: 30),
+              style: TextStyle(color: Colors.black, fontSize: 30 * scaleFactor),
             ),
           ),
         ),
@@ -120,11 +123,12 @@ class _PlayerRowState extends State<PlayerRow> {
 
   @override
   Widget build(BuildContext context) {
+    double scaleFactor = Provider.of<ScaleFactorProvider>(context).scaleFactor;
     return Row(
       children: [
         Container(
-          width: 80,
-          margin: const EdgeInsets.all(2),
+          width: 80 * scaleFactor,
+          margin: EdgeInsets.all(2 * scaleFactor),
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.only(
@@ -137,21 +141,21 @@ class _PlayerRowState extends State<PlayerRow> {
           child: TextField(
             controller: widget.nameController,
             maxLength: 5,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               counterText: '',
               hintText: 'Name',
               border: InputBorder.none,
-              contentPadding: EdgeInsets.symmetric(horizontal: 8),
+              contentPadding: EdgeInsets.symmetric(horizontal: 8 * scaleFactor),
             ),
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.black, fontSize: 20),
+            style: TextStyle(color: Colors.black, fontSize: 20 * scaleFactor),
           ),
         ),
         ...List.generate(18, (index) {
           return Container(
-            width: 100,
-            height: 80,
-            margin: const EdgeInsets.all(2),
+            width: 100 * scaleFactor,
+            height: 80 * scaleFactor,
+            margin: EdgeInsets.all(2 * scaleFactor),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.only(
@@ -164,15 +168,15 @@ class _PlayerRowState extends State<PlayerRow> {
               child: SizedBox(
                 width: double.infinity,
                 height: double.infinity,
-                child: _buildTextField(index),
+                child: _buildTextField(index, scaleFactor),
               ),
             ),
           );
         }),
         Container(
-          width: 100,
-          height: 80,
-          margin: const EdgeInsets.all(2),
+          width: 100 * scaleFactor,
+          height: 80 * scaleFactor,
+          margin: EdgeInsets.all(2 * scaleFactor),
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.only(
@@ -185,19 +189,25 @@ class _PlayerRowState extends State<PlayerRow> {
             children: [
               Text(
                 'F: ${widget.score.sublist(0, 9).reduce((a, b) => a + b)}',
-                style: const TextStyle(color: Colors.black, fontSize: 16),
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 16 * scaleFactor,
+                ),
                 textAlign: TextAlign.left,
               ),
               Text(
                 'B: ${widget.score.sublist(9, 18).reduce((a, b) => a + b)}',
-                style: const TextStyle(color: Colors.black, fontSize: 16),
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 16 * scaleFactor,
+                ),
                 textAlign: TextAlign.left,
               ),
               Text(
                 'T: ${widget.score.sublist(0, 9).reduce((a, b) => a + b) + widget.score.sublist(9, 18).reduce((a, b) => a + b)}',
-                style: const TextStyle(
+                style: TextStyle(
                     color: Colors.black,
-                    fontSize: 16,
+                    fontSize: 16 * scaleFactor,
                     fontWeight: FontWeight.bold),
                 textAlign: TextAlign.left,
               ),

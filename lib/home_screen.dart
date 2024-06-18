@@ -1,9 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:scorecard_app/scale_factor_provider.dart';
 import 'package:scorecard_app/widgets/course_action_sheet.dart';
 import 'package:scorecard_app/widgets/player_row.dart';
 import 'package:scorecard_app/widgets/putts_row.dart';
-
 import 'package:scorecard_app/widgets/settings_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -291,14 +292,17 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _showTeesActionSheet(BuildContext context) {
+  void _showTeesActionSheet(BuildContext context, double scaleFactor) {
     showCupertinoModalPopup<void>(
       context: context,
       builder: (BuildContext context) => SizedBox(
         height: 300,
         child: CupertinoActionSheet(
-          title: const Text('Tees'),
-          message: const Text('Select a tee.'),
+          title: Text('Tees', style: TextStyle(fontSize: 15 * scaleFactor)),
+          message: Text(
+            'Select a tee.',
+            style: TextStyle(fontSize: 12 * scaleFactor),
+          ),
           actions: tees.map((tee) {
             return CupertinoActionSheetAction(
               onPressed: () {
@@ -307,7 +311,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 });
                 Navigator.pop(context);
               },
-              child: Text(tee),
+              child: Text(
+                tee,
+                style: TextStyle(fontSize: 15 * scaleFactor),
+              ),
             );
           }).toList(),
         ),
@@ -317,6 +324,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scaleFactor = Provider.of<ScaleFactorProvider>(context).scaleFactor;
+
     if (isLoading) {
       return Scaffold(
         appBar: AppBar(
@@ -358,17 +367,17 @@ class _HomeScreenState extends State<HomeScreen> {
           },
           child: Text(
             selectedCourse,
-            style: const TextStyle(color: Colors.white, fontSize: 18),
+            style: TextStyle(color: Colors.white, fontSize: 18),
           ),
         ),
         actions: [
           TextButton(
             child: Text(
               selectedTee,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: Colors.white, fontSize: 15),
             ),
             onPressed: () {
-              _showTeesActionSheet(context);
+              _showTeesActionSheet(context, scaleFactor);
             },
           ),
         ],
@@ -392,15 +401,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     children: [
                       Padding(
-                        padding: const EdgeInsets.only(right: 20),
+                        padding: EdgeInsets.only(right: 20 * scaleFactor),
                         child: Row(
                           children: List.generate(18, (index) {
                             return IgnorePointer(
                               ignoring: false,
                               child: Container(
-                                width: 100,
-                                height: 110,
-                                margin: const EdgeInsets.all(2),
+                                width: 100 * scaleFactor,
+                                height: 110 * scaleFactor,
+                                margin: EdgeInsets.all(2 * scaleFactor),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.only(
@@ -424,32 +433,36 @@ class _HomeScreenState extends State<HomeScreen> {
                                       const SizedBox(height: 5),
                                       Text(
                                         'Hole ${index + 1}',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                             color: Colors.black,
                                             fontWeight: FontWeight.bold,
-                                            fontSize: 20),
+                                            fontSize: 20 * scaleFactor),
                                       ),
                                       Text(
                                         'Par ${par[index]}',
-                                        style: const TextStyle(
-                                            color: Colors.black),
+                                        style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: 14 * scaleFactor),
                                       ),
                                       Text(
                                         '${yardages[selectedTee]?[index] ?? 0} yards',
-                                        style: const TextStyle(
-                                            color: Colors.black),
+                                        style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: 14 * scaleFactor),
                                       ),
                                       if (mensHandicap == true)
                                         Text(
                                           'HCap: ${mensHcap[index]}',
-                                          style: const TextStyle(
-                                              color: Colors.black),
+                                          style: TextStyle(
+                                              color: Colors.black,
+                                              fontSize: 14 * scaleFactor),
                                         ),
                                       if (mensHandicap == false)
                                         Text(
                                           'HCap: ${womensHcap[index]}',
-                                          style: const TextStyle(
-                                              color: Colors.black),
+                                          style: TextStyle(
+                                              color: Colors.black,
+                                              fontSize: 14 * scaleFactor),
                                         ),
                                     ],
                                   ),
@@ -481,7 +494,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       }),
                       if (showPutterRow)
                         Padding(
-                          padding: const EdgeInsets.only(right: 104),
+                          padding: EdgeInsets.only(left: 0 * scaleFactor),
                           child: PutterRow(
                             putts: puttsScores,
                             par: par,
@@ -492,15 +505,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       if (showFairwayGreen) // Conditionally render the row based on the switch state
                         Padding(
-                          padding: const EdgeInsets.only(right: 20.0),
+                          padding: EdgeInsets.only(right: 20.0 * scaleFactor),
                           child: Row(
                             children: List.generate(
                               18,
                               (index) {
                                 return Container(
-                                  width: 100,
-                                  height: 70,
-                                  margin: const EdgeInsets.all(2),
+                                  width: 100 * scaleFactor,
+                                  height: 70 * scaleFactor,
+                                  margin: EdgeInsets.all(2 * scaleFactor),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.only(
@@ -522,49 +535,52 @@ class _HomeScreenState extends State<HomeScreen> {
                                     children: [
                                       if (par[index] == 4 || par[index] == 5)
                                         SizedBox(
-                                          height: 35,
+                                          height: 35 * scaleFactor,
                                           child: TextButton(
                                             onPressed: () =>
                                                 _toggleFairway(index),
                                             child: Text(
                                               'Fairway',
                                               style: TextStyle(
-                                                  fontSize: 13,
-                                                  color: fairwaysHit[index] == 1
-                                                      ? Colors.green
-                                                      : Colors.red),
+                                                fontSize: 13 * scaleFactor,
+                                                color: fairwaysHit[index] == 1
+                                                    ? Colors.green
+                                                    : Colors.red,
+                                              ),
                                             ),
                                           ),
                                         ),
                                       if (par[index] == 4 || par[index] == 5)
                                         SizedBox(
-                                          height: 35,
+                                          height: 35 * scaleFactor,
                                           child: TextButton(
                                             onPressed: () =>
                                                 _toggleGreen(index),
                                             child: Text(
                                               'Green',
                                               style: TextStyle(
-                                                  fontSize: 13,
-                                                  color: greensHit[index] == 1
-                                                      ? Colors.green
-                                                      : Colors.red),
+                                                fontSize: 13 * scaleFactor,
+                                                color: greensHit[index] == 1
+                                                    ? Colors.green
+                                                    : Colors.red,
+                                              ),
                                             ),
                                           ),
                                         ),
                                       if (par[index] == 3)
                                         SizedBox(
-                                          height: 70,
+                                          height: 70 * scaleFactor,
                                           child: TextButton(
                                             onPressed: () =>
                                                 _toggleGreen(index),
                                             child: Text(
                                               'Green',
                                               style: TextStyle(
-                                                  fontSize: 13,
-                                                  color: greensHit[index] == 1
-                                                      ? Colors.green
-                                                      : Colors.red),
+                                                fontSize: 13 * scaleFactor,
+                                                color: greensHit[index] == 1
+                                                    ? Colors.green
+                                                    : Colors.red,
+                                              ),
                                             ),
                                           ),
                                         ),
@@ -585,47 +601,50 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       bottomNavigationBar: BottomAppBar(
-        height: 62.0,
+        height: 62.0 * scaleFactor,
         child: SizedBox(
-          height: 62,
+          height: 62 * scaleFactor,
           child: Row(
             children: <Widget>[
               GestureDetector(
                 onTap: () {
                   _addPlayer();
                 },
-                onLongPress: () {
-                  showCupertinoModalPopup(
-                    context: context,
-                    builder: (BuildContext context) => CupertinoActionSheet(
-                      title: const Text('Add Player or Putt Counter'),
-                      message: const Text('Choose an option.'),
-                      actions: [
-                        CupertinoActionSheetAction(
-                          onPressed: () {
-                            _addPlayer();
-                            Navigator.pop(context);
-                          },
-                          child: const Text('Add Player'),
-                        ),
-                        CupertinoActionSheetAction(
-                          onPressed: () {
-                            _addPutter();
-                            // _togglePutterRow();
-                            Navigator.pop(context);
-                          },
-                          child: const Text('Add Putt Counter'),
-                        ),
-                      ],
-                      cancelButton: CupertinoActionSheetAction(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        child: const Text('Cancel'),
-                      ),
-                    ),
-                  );
-                },
+                // onLongPress: () {
+                //   showCupertinoModalPopup(
+                //     context: context,
+                //     builder: (BuildContext context) => CupertinoActionSheet(
+                //       title: Text(
+                //         'Add Player or Putt Counter',
+                //         style: TextStyle(fontSize: 18),
+                //       ),
+                //       message: const Text('Choose an option.'),
+                //       actions: [
+                //         CupertinoActionSheetAction(
+                //           onPressed: () {
+                //             _addPlayer();
+                //             Navigator.pop(context);
+                //           },
+                //           child: const Text('Add Player'),
+                //         ),
+                //         CupertinoActionSheetAction(
+                //           onPressed: () {
+                //             _addPutter();
+                //             // _togglePutterRow();
+                //             Navigator.pop(context);
+                //           },
+                //           child: const Text('Add Putt Counter'),
+                //         ),
+                //       ],
+                //       cancelButton: CupertinoActionSheetAction(
+                //         onPressed: () {
+                //           Navigator.pop(context);
+                //         },
+                //         child: const Text('Cancel'),
+                //       ),
+                //     ),
+                //   );
+                // },
                 child: const Row(
                   children: [
                     SizedBox(width: 8),
@@ -644,11 +663,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       Text(
                         'Fairways Hit: ${_countFairwaysHit()}/${par.where((p) => p == 4 || p == 5).length}',
-                        style: const TextStyle(fontSize: 11),
+                        style: TextStyle(fontSize: 11 * scaleFactor),
                       ),
                       Text(
                         'Greens Hit: ${_countGreensHit()}/18',
-                        style: const TextStyle(fontSize: 11),
+                        style: TextStyle(fontSize: 11 * scaleFactor),
                       ),
                     ],
                   ),
@@ -659,31 +678,48 @@ class _HomeScreenState extends State<HomeScreen> {
                   showCupertinoDialog(
                     context: context,
                     builder: (BuildContext context) => CupertinoAlertDialog(
-                      title: const Text('Reset'),
-                      content: const Text(
-                          'Are you sure you want to reset the scores?'),
+                      // title: Text(
+                      //   'Reset',
+                      //   style: TextStyle(fontSize: 20 * scaleFactor),
+                      // ),
+                      content: Text(
+                        'Are you sure you want to reset the scores?',
+                        style: TextStyle(fontSize: 18 * scaleFactor),
+                      ),
                       actions: [
                         CupertinoDialogAction(
                           onPressed: () {
                             _resetValues();
                             Navigator.pop(context);
                           },
-                          child: const Text('Reset',
-                              style:
-                                  TextStyle(fontSize: 20, color: Colors.red)),
+                          child: Text(
+                            'Reset',
+                            style: TextStyle(
+                              fontSize: 20 * scaleFactor,
+                              color: Colors.red,
+                            ),
+                          ),
                         ),
                         CupertinoDialogAction(
                           onPressed: () {
                             Navigator.pop(context);
                           },
-                          child: const Text('Cancel'),
+                          child: Text(
+                            'Cancel',
+                            style: TextStyle(fontSize: 20 * scaleFactor),
+                          ),
                         ),
                       ],
                     ),
                   );
                 },
-                child: const Text('Reset',
-                    style: TextStyle(fontSize: 20, color: Colors.red)),
+                child: Text(
+                  'Reset',
+                  style: TextStyle(
+                    fontSize: 20 * scaleFactor,
+                    color: Colors.red,
+                  ),
+                ),
               ),
             ],
           ),
