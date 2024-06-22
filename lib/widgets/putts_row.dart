@@ -63,15 +63,15 @@ class _PutterRowState extends State<PutterRow> {
                     baseOffset: 0,
                     extentOffset: widget.controllers[index].text.length,
                   );
-                  double screenWidth = MediaQuery.of(context).size.width;
-                  double targetScrollPosition =
-                      (index * 105.0 + 10) - (screenWidth / 2 - 100);
+                  // double screenWidth = MediaQuery.of(context).size.width;
+                  // double targetScrollPosition =
+                  //     (index * 105.0 + 10) - (screenWidth / 2 - 100);
 
-                  widget.scrollController.animateTo(
-                    targetScrollPosition,
-                    duration: const Duration(milliseconds: 10),
-                    curve: Curves.easeInOut,
-                  );
+                  // widget.scrollController.animateTo(
+                  //   targetScrollPosition,
+                  //   duration: const Duration(milliseconds: 10),
+                  //   curve: Curves.easeInOut,
+                  // );
                 });
               },
               focusNode: widget.focusNodes[index],
@@ -135,6 +135,7 @@ class _PutterRowState extends State<PutterRow> {
               'Putts',
               style: TextStyle(color: Colors.black, fontSize: 20 * scaleFactor),
               textAlign: TextAlign.center,
+              // textScaler: TextScaler.linear(scaleFactor),
             ),
           ),
         ),

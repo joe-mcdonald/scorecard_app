@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:scorecard_app/home_screen.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:scorecard_app/home_screen.dart';
 import 'package:scorecard_app/scale_factor_provider.dart';
 
 void main() {
@@ -22,8 +22,18 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scaleFactorProvider = Provider.of<ScaleFactorProvider>(context);
+
     return MaterialApp(
-      home: HomeScreen(),
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaleFactor: scaleFactorProvider.scaleFactor,
+          ),
+          child: child!,
+        );
+      },
+      home: const HomeScreen(),
     );
   }
 }
