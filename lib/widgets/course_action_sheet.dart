@@ -128,7 +128,7 @@ class _CourseActionSheetState extends State<CourseActionSheet> {
               'pheasantglen', 'Pheasant Glen Golf Resort', 'Nanaimo, BC'),
           _buildAction('pointgrey', 'Point Grey G&CC', 'Vancouver, BC'),
           _buildAction(
-              'royalcolwood', 'Royal Colwood Golf Club', 'Victoria, BC'),
+              'royalcolwood', 'Royal Colwood Golf Club', 'Colwood, BC'),
           _buildAction('shaughnessy', 'Shaughnessy G&CC', 'Vancouver, BC'),
           _buildAction(
               'universitygolfclub', 'University Golf Club', 'Vancouver, BC'),

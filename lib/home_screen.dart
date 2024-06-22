@@ -586,7 +586,7 @@ class _HomeScreenState extends State<HomeScreen> {
             shadowColor: Colors.black,
           ),
           child: Text(
-            selectedCourse,
+            selectedCourse.isEmpty ? 'Select Course' : selectedCourse,
             style: const TextStyle(color: Colors.white, fontSize: 18),
           ),
         ),
