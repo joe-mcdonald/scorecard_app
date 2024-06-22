@@ -1,7 +1,8 @@
 import 'dart:async';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:scorecard_app/scale_factor_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -76,6 +77,9 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final scaleFactorProvider = Provider.of<ScaleFactorProvider>(context);
+    final double scaleFactor = scaleFactorProvider.scaleFactor;
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -136,7 +140,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               CupertinoSwitch(
                 value: showMensHandicap,
-                activeColor: CupertinoColors.inactiveGray,
+                activeColor: CupertinoColors.lightBackgroundGray,
                 onChanged: (bool showMensHandicapValue) {
                   setState(() {
                     showMensHandicap = showMensHandicapValue;
@@ -147,6 +151,25 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ],
           ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              GestureDetector(
+                child: const Text('Text Size'),
+              ),
+              CupertinoSlider(
+                value: scaleFactor,
+                min: 0.7,
+                max: 1.19,
+                divisions: 20,
+                onChanged: (value) {
+                  scaleFactorProvider.setScaleFactor(value);
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 15),
         ],
       ),
     );

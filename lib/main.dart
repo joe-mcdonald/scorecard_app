@@ -6,7 +6,8 @@ import 'package:scorecard_app/scale_factor_provider.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]).then((_) {
+  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp])
+      .then((_) {
     runApp(
       ChangeNotifierProvider(
         create: (context) => ScaleFactorProvider(),
@@ -21,8 +22,18 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scaleFactorProvider = Provider.of<ScaleFactorProvider>(context);
+
     return MaterialApp(
-      home: HomeScreen(),
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaleFactor: scaleFactorProvider.scaleFactor,
+          ),
+          child: child!,
+        );
+      },
+      home: const HomeScreen(),
     );
   }
 }

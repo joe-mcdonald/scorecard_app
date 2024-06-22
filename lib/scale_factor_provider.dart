@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class ScaleFactorProvider with ChangeNotifier {
-  double _scaleFactor = 0.9;
+  double _scaleFactor = 1.0;
 
   double get scaleFactor => _scaleFactor;
 

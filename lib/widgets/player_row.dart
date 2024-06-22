@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:scorecard_app/scale_factor_provider.dart';
 
 class PlayerRow extends StatefulWidget {
+  final int index;
   final List<int> score;
   final List<int> fairwaysHit;
   final List<int> greensHit;
@@ -13,9 +15,11 @@ class PlayerRow extends StatefulWidget {
   final List<TextEditingController> controllers;
   final TextEditingController nameController;
   final ScrollController scrollController;
+  final Function(int) removePlayer;
 
   const PlayerRow({
     super.key,
+    required this.index,
     required this.score,
     required this.fairwaysHit,
     required this.greensHit,
@@ -24,6 +28,7 @@ class PlayerRow extends StatefulWidget {
     required this.controllers,
     required this.nameController,
     required this.scrollController,
+    required this.removePlayer,
   });
 
   @override
@@ -63,6 +68,10 @@ class _PlayerRowState extends State<PlayerRow> {
               });
             },
             child: TextField(
+              focusNode: widget.focusNodes[index],
+              controller: widget.controllers[index],
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
               onTap: () {
                 setState(() {
                   widget.focusNodes[index].requestFocus();
@@ -70,18 +79,16 @@ class _PlayerRowState extends State<PlayerRow> {
                     baseOffset: 0,
                     extentOffset: widget.controllers[index].text.length,
                   );
-                  double screenWidth = MediaQuery.of(context).size.width;
-                  double targetScrollPosition =
-                      (index * 105.0 + 10) - (screenWidth / 2 - 100);
-                  widget.scrollController.animateTo(
-                    targetScrollPosition,
-                    duration: const Duration(milliseconds: 10),
-                    curve: Curves.easeInOut,
-                  );
+                  // double screenWidth = MediaQuery.of(context).size.width;
+                  // double targetScrollPosition =
+                  //     (index * 105.0 + 10) - (screenWidth / 2 - 100);
+                  // widget.scrollController.animateTo(
+                  //   targetScrollPosition,
+                  //   duration: const Duration(milliseconds: 10),
+                  //   curve: Curves.easeInOut,
+                  // );
                 });
               },
-              focusNode: widget.focusNodes[index],
-              controller: widget.controllers[index],
               onChanged: (text) {
                 int? value = int.tryParse(text);
                 if (value != null) {
@@ -103,8 +110,6 @@ class _PlayerRowState extends State<PlayerRow> {
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
               ),
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
               style: TextStyle(color: Colors.black, fontSize: 30 * scaleFactor),
             ),
           ),
@@ -126,29 +131,98 @@ class _PlayerRowState extends State<PlayerRow> {
     double scaleFactor = Provider.of<ScaleFactorProvider>(context).scaleFactor;
     return Row(
       children: [
-        Container(
-          width: 80 * scaleFactor,
-          margin: EdgeInsets.all(2 * scaleFactor),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topRight: Radius.circular(12),
-              bottomRight: Radius.circular(12),
-              topLeft: Radius.circular(12),
-              bottomLeft: Radius.circular(12),
+        // Container(
+        //   width: 80 * scaleFactor,
+        //   height: 40 * scaleFactor,
+        //   margin: EdgeInsets.all(2 * scaleFactor),
+        //   decoration: const BoxDecoration(
+        //     color: Colors.white,
+        //     borderRadius: BorderRadius.only(
+        //       topRight: Radius.circular(12),
+        //       bottomRight: Radius.circular(12),
+        //       topLeft: Radius.circular(12),
+        //       bottomLeft: Radius.circular(12),
+        //     ),
+        //   ),
+        //   child: TextField(
+        //     controller: widget.nameController,
+        //     maxLength: 5,
+        //     decoration: InputDecoration(
+        //       counterText: '',
+        //       hintText: 'Name',
+        //       border: InputBorder.none,
+        //       contentPadding: EdgeInsets.symmetric(horizontal: 8 * scaleFactor),
+        //     ),
+        //     textAlign: TextAlign.center,
+        //     style: TextStyle(color: Colors.black, fontSize: 20 * scaleFactor),
+        //   ),
+        // ),
+        GestureDetector(
+          onTap: () {
+            showCupertinoDialog(
+              context: context,
+              builder: (context) => CupertinoAlertDialog(
+                title: Text('Name'),
+                content: CupertinoTextField(
+                  controller: widget.nameController,
+                  maxLength: 5,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.black),
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.black, fontSize: 20),
+                ),
+                actions: [
+                  CupertinoDialogAction(
+                    child: Text(
+                      'Remove Player',
+                      style: TextStyle(color: CupertinoColors.systemRed),
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      widget.removePlayer(widget.index);
+                      // Remove the player row
+                    },
+                  ),
+                  CupertinoDialogAction(
+                    child: Text(
+                      'OK',
+                      style: TextStyle(color: CupertinoColors.activeBlue),
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      // Save the name, display it on the row
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+          child: Container(
+            width: 80 * scaleFactor,
+            height: 40 * scaleFactor,
+            margin: EdgeInsets.all(2 * scaleFactor),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topRight: Radius.circular(12),
+                bottomRight: Radius.circular(12),
+                topLeft: Radius.circular(12),
+                bottomLeft: Radius.circular(12),
+              ),
             ),
-          ),
-          child: TextField(
-            controller: widget.nameController,
-            maxLength: 5,
-            decoration: InputDecoration(
-              counterText: '',
-              hintText: 'Name',
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.symmetric(horizontal: 8 * scaleFactor),
+            child: Center(
+              child: Text(
+                (widget.nameController.text).isEmpty
+                    ? 'Name'
+                    : widget.nameController.text,
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 20 * scaleFactor,
+                ),
+              ),
             ),
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.black, fontSize: 20 * scaleFactor),
           ),
         ),
         ...List.generate(18, (index) {
@@ -175,7 +249,7 @@ class _PlayerRowState extends State<PlayerRow> {
         }),
         Container(
           width: 100 * scaleFactor,
-          height: 80 * scaleFactor,
+          height: 81 * scaleFactor,
           margin: EdgeInsets.all(2 * scaleFactor),
           decoration: const BoxDecoration(
             color: Colors.white,
@@ -230,7 +304,6 @@ class _ShapePainter extends CustomPainter {
     if (score == null) return;
 
     int difference = score! - par;
-
     if (difference <= -2) {
       _drawCircles(canvas, size, 2);
     } else if (difference == -1) {
