@@ -9,6 +9,7 @@
 	<string>mailto</string>
 	<string>twitter</string>
 	</array>
+	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>sms</string>
 	</array>

@@ -62,6 +62,13 @@ class _CourseActionSheetState extends State<CourseActionSheet> {
     });
   }
 
+  String encodeQueryParameters(Map<String, String> params) {
+    return params.entries
+        .map((e) =>
+            '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+        .join('&');
+  }
+
   void _requestCourse() async {
     const phoneNumber = '6048087500';
     const message = 'I would like to request a course: ';
@@ -69,9 +76,9 @@ class _CourseActionSheetState extends State<CourseActionSheet> {
     final Uri smsUri = Uri(
       scheme: 'sms',
       path: phoneNumber,
-      queryParameters: <String, String>{
+      query: encodeQueryParameters(<String, String>{
         'body': message,
-      },
+      }),
     );
 
     if (await canLaunchUrl(smsUri)) {
