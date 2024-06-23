@@ -105,9 +105,6 @@ class MatchPlayResultsRow extends StatelessWidget {
             ),
           );
         }),
-
-        // TODO: turn this column into a 'average putts per hole' column
-
         Container(
           width: 100 * scaleFactor,
           height: 80 * scaleFactor,

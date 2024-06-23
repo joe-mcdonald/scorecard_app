@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -75,6 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
       List.generate(18, (index) => TextEditingController());
   List<FocusNode> focusNodes = List.generate(18, (index) => FocusNode());
   ScrollController scrollController = ScrollController();
+  bool hasSeenMatchPlayWinDialog = false;
 
   @override
   void initState() {
@@ -272,6 +275,7 @@ class _HomeScreenState extends State<HomeScreen> {
       playersFocusNodes.removeRange(1, playersFocusNodes.length);
       nameControllers.removeRange(1, nameControllers.length);
       hcapControllers.removeRange(1, hcapControllers.length);
+      hasSeenMatchPlayWinDialog = false;
 
       _saveScores();
       _saveState();
@@ -318,53 +322,156 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _calculateMatchPlay() async {
     if (playersScores.length < 2) return;
 
-    // Assuming we have exactly 2 players for simplicity.
-    List<int> player1Scores = playersScores[0];
-    List<int> player2Scores = playersScores[1];
-
     int player1Handicap = int.tryParse(hcapControllers[0].text) ?? 0;
     int player2Handicap = int.tryParse(hcapControllers[1].text) ?? 0;
-
-    int netStrokes = player1Handicap - player2Handicap;
-
-    // Reset the match play results
+    int netStrokes = player1Handicap -
+        player2Handicap; //if negative, player 2 gets strokes, if positive, player 1 gets strokes
     matchPlayResults = List.generate(18, (index) => 0);
 
     for (int i = 0; i < 18; i++) {
-      int player1NetScore = player1Scores[i];
-      int player2NetScore = player2Scores[i];
-
-      // Apply net strokes if applicable
-      // if (netStrokes > 0) {
-      //   if (mensHcap[i] <= netStrokes) {
-      //     player2NetScore -= 1;
-      //   }
-      // } else if (netStrokes < 0) {
-      //   if (mensHcap[i] <= -netStrokes) {
-      //     player1NetScore -= 1;
-      //   }
-      // }
+      if (playersScores[0][i] == 0 || playersScores[1][i] == 0) {
+        matchPlayResults[i] = 0;
+        setState(() {});
+        return;
+      }
+      bool isHandicapHole;
+      if (mensHandicap) {
+        isHandicapHole = mensHcap[i] <= netStrokes.abs();
+      } else {
+        isHandicapHole = womensHcap[i] <= netStrokes;
+      }
 
       if (playersScores[0][i] != '' && playersScores[1][i] != '') {
-        if (playersScores[0][i] < playersScores[1][i]) {
-          if (i == 0) {
-            matchPlayResults[i] = -1; //negative == player 1 lead
-          } else {
-            matchPlayResults[i] = matchPlayResults[i - 1] - 1;
-          }
-        } else if (player1NetScore > player2NetScore) {
-          if (i == 0) {
-            matchPlayResults[i] = 1; //positive  == player 2 lead
-          } else {
-            matchPlayResults[i] = matchPlayResults[i - 1] + 1;
+        if (isHandicapHole) {
+          if (netStrokes > 0) {
+            //player 1 gets extra stroke
+            if ((playersScores[0][i] < playersScores[1][i] + 1)) {
+              if (i == 0) {
+                matchPlayResults[i] = -1; //negative == player 1 lead
+              } else {
+                matchPlayResults[i] = matchPlayResults[i - 1] - 1;
+              }
+            } else if (playersScores[0][i] > playersScores[1][i] + 1) {
+              if (i == 0) {
+                matchPlayResults[i] = 1; //positive  == player 2 lead
+              } else {
+                matchPlayResults[i] = matchPlayResults[i - 1] + 1;
+              }
+            } else {
+              if (i == 0) {
+                matchPlayResults[i] = 0; //tie == nothing changes
+              } else {
+                matchPlayResults[i] = matchPlayResults[i - 1];
+              }
+            }
+          } else if (netStrokes < 0) {
+            if ((playersScores[0][i] + 1 < playersScores[1][i])) {
+              if (i == 0) {
+                matchPlayResults[i] = -1; //negative == player 1 lead
+              } else {
+                matchPlayResults[i] = matchPlayResults[i - 1] - 1;
+              }
+            } else if (playersScores[0][i] + 1 > playersScores[1][i]) {
+              if (i == 0) {
+                matchPlayResults[i] = 1; //positive  == player 2 lead
+              } else {
+                matchPlayResults[i] = matchPlayResults[i - 1] + 1;
+              }
+            } else {
+              if (i == 0) {
+                matchPlayResults[i] = 0; //tie == nothing changes
+              } else {
+                matchPlayResults[i] = matchPlayResults[i - 1];
+              }
+            }
           }
         } else {
-          if (i == 0) {
-            matchPlayResults[i] = 0; //tie == nothing changes
+          if ((playersScores[0][i] < playersScores[1][i])) {
+            if (i == 0) {
+              matchPlayResults[i] = -1; //negative == player 1 lead
+            } else {
+              matchPlayResults[i] = matchPlayResults[i - 1] - 1;
+            }
+          } else if (playersScores[0][i] > playersScores[1][i]) {
+            if (i == 0) {
+              matchPlayResults[i] = 1; //positive  == player 2 lead
+            } else {
+              matchPlayResults[i] = matchPlayResults[i - 1] + 1;
+            }
           } else {
-            matchPlayResults[i] = matchPlayResults[i - 1];
+            if (i == 0) {
+              matchPlayResults[i] = 0; //tie == nothing changes
+            } else {
+              matchPlayResults[i] = matchPlayResults[i - 1];
+            }
           }
         }
+      } else {
+        matchPlayResults[i] = 0;
+      }
+      if (!hasSeenMatchPlayWinDialog &&
+          ((i == 17 && matchPlayResults[17].abs() >= 1) ||
+              (i == 16 && matchPlayResults[16].abs() >= 2) ||
+              (i == 15 && matchPlayResults[15].abs() >= 3) ||
+              (i == 14 && matchPlayResults[14].abs() >= 4) ||
+              (i == 13 && matchPlayResults[13].abs() >= 5) ||
+              (i == 12 && matchPlayResults[12].abs() >= 6) ||
+              (i == 11 && matchPlayResults[11].abs() >= 7) ||
+              (i == 10 && matchPlayResults[10].abs() >= 8))) {
+        hasSeenMatchPlayWinDialog = true;
+        if (matchPlayResults[i] < 0) {
+          // Player 1 wins
+          showCupertinoDialog(
+            context: context,
+            builder: (BuildContext context) => CupertinoAlertDialog(
+              title: Text('${nameControllers[0].text} Wins!'),
+              content:
+                  Text('${nameControllers[0].text} has won the match play.'),
+              actions: <CupertinoDialogAction>[
+                CupertinoDialogAction(
+                  child: const Text('OK'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            ),
+          );
+        } else if (matchPlayResults[i] > 0) {
+          // Player 2 wins
+          showCupertinoDialog(
+            context: context,
+            builder: (BuildContext context) => CupertinoAlertDialog(
+              title: Text('${nameControllers[1].text} Wins!'),
+              content:
+                  Text('${nameControllers[1].text} has won the match play.'),
+              actions: <CupertinoDialogAction>[
+                CupertinoDialogAction(
+                  child: const Text('OK'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            ),
+          );
+        }
+        // showCupertinoDialog(
+        //   context: context,
+        //   builder: (BuildContext context) => CupertinoAlertDialog(
+        //     title: Text('${nameControllers[0].text} Wins!'),
+        //     content:
+        //         Text('${nameControllers[0].text}  has won the match play.'),
+        //     actions: <CupertinoDialogAction>[
+        //       CupertinoDialogAction(
+        //         child: const Text('OK'),
+        //         onPressed: () {
+        //           Navigator.of(context).pop();
+        //         },
+        //       ),
+        //     ],
+        //   ),
+        // );
       }
     }
 
@@ -399,6 +506,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return details.toString();
+  }
+
+  bool isHandicapHole(int index, int handicapDifference) {
+    if (mensHandicap) {
+      return mensHcap[index] <= handicapDifference.abs();
+    } else {
+      return womensHcap[index] <= handicapDifference.abs();
+    }
   }
 
   @override
@@ -525,7 +640,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
                   controller: scrollController,
-                  physics: const ClampingScrollPhysics(),
+                  physics: const ClampingScrollPhysics(), // Add this line
                   child: Column(
                     children: [
                       Padding(
@@ -538,8 +653,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 width: 100 * scaleFactor,
                                 height: 110 * scaleFactor,
                                 margin: EdgeInsets.all(2 * scaleFactor),
+                                // color: Colors.white,
                                 decoration: BoxDecoration(
                                   color: Colors.white,
+                                  // handicapHole ? Colors.grey : Colors.white,
                                   borderRadius: BorderRadius.only(
                                     topLeft: index == 0
                                         ? const Radius.circular(12)
