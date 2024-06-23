@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -17,6 +18,8 @@ class PlayerRow extends StatefulWidget {
   final TextEditingController hcapController;
   final ScrollController scrollController;
   final Function(int) removePlayer;
+  final VoidCallback onScoreChanged;
+  final bool matchPlayEnabled;
 
   const PlayerRow({
     super.key,
@@ -31,6 +34,8 @@ class PlayerRow extends StatefulWidget {
     required this.hcapController,
     required this.scrollController,
     required this.removePlayer,
+    required this.onScoreChanged,
+    required this.matchPlayEnabled,
   });
 
   @override
@@ -46,6 +51,14 @@ class _PlayerRowState extends State<PlayerRow> {
   }
 
   Widget _buildTextField(int index, double scaleFactor) {
+    Color textColor = Colors.black; // Default color
+    if (widget.matchPlayEnabled) {
+      if (widget.index == 0) {
+        textColor = Colors.red; // Player 1's color
+      } else if (widget.index == 1) {
+        textColor = const Color.fromARGB(198, 0, 0, 255); // Player 2's color
+      }
+    }
     return Stack(
       alignment: Alignment.center,
       children: [
@@ -69,42 +82,47 @@ class _PlayerRowState extends State<PlayerRow> {
                 );
               });
             },
-            child: TextField(
-              focusNode: widget.focusNodes[index],
-              controller: widget.controllers[index],
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              onTap: () {
-                setState(() {
-                  widget.focusNodes[index].requestFocus();
-                  widget.controllers[index].selection = TextSelection(
-                    baseOffset: 0,
-                    extentOffset: widget.controllers[index].text.length,
-                  );
-                });
-              },
-              onChanged: (text) {
-                int? value = int.tryParse(text);
-                if (value != null) {
+            child: Center(
+              child: TextField(
+                focusNode: widget.focusNodes[index],
+                controller: widget.controllers[index],
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                onTap: () {
                   setState(() {
-                    widget.score[index] = value;
-                    _saveScores();
+                    widget.focusNodes[index].requestFocus();
+                    widget.controllers[index].selection = TextSelection(
+                      baseOffset: 0,
+                      extentOffset: widget.controllers[index].text.length,
+                    );
                   });
-                } else {
-                  setState(() {
-                    widget.score[index] = 0;
-                    _saveScores();
-                  });
-                }
-              },
-              decoration: InputDecoration(
-                hintText: '${widget.par[index]}',
-                hintStyle:
-                    TextStyle(color: Colors.grey, fontSize: 30 * scaleFactor),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
+                },
+                onChanged: (text) {
+                  int? value = int.tryParse(text);
+                  if (value != null) {
+                    setState(() {
+                      widget.score[index] = value;
+                      _saveScores();
+                      widget
+                          .onScoreChanged(); // Call the callback when score changes
+                    });
+                  } else {
+                    setState(() {
+                      widget.score[index] = 0;
+                      _saveScores();
+                      widget
+                          .onScoreChanged(); // Call the callback when score changes
+                    });
+                  }
+                },
+                decoration: InputDecoration(
+                  hintText: '${widget.par[index]}',
+                  hintStyle: TextStyle(color: Colors.grey, fontSize: 33),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                style: TextStyle(color: textColor, fontSize: 33),
               ),
-              style: TextStyle(color: Colors.black, fontSize: 30 * scaleFactor),
             ),
           ),
         ),
@@ -205,13 +223,13 @@ class _PlayerRowState extends State<PlayerRow> {
               ),
             ),
             child: Center(
-              child: Text(
+              child: AutoSizeText(
                 (widget.nameController.text).isEmpty
                     ? 'Name'
                     : widget.nameController.text,
                 style: TextStyle(
                   color: Colors.black,
-                  fontSize: 20 * scaleFactor,
+                  fontSize: 30,
                 ),
               ),
             ),
@@ -234,7 +252,10 @@ class _PlayerRowState extends State<PlayerRow> {
               child: SizedBox(
                 width: double.infinity,
                 height: double.infinity,
-                child: _buildTextField(index, scaleFactor),
+                child: _buildTextField(
+                  index,
+                  scaleFactor,
+                ),
               ),
             ),
           );
@@ -257,7 +278,7 @@ class _PlayerRowState extends State<PlayerRow> {
                 'F: ${widget.score.sublist(0, 9).reduce((a, b) => a + b)}',
                 style: TextStyle(
                   color: Colors.black,
-                  fontSize: 16 * scaleFactor,
+                  fontSize: 18,
                 ),
                 textAlign: TextAlign.left,
               ),
@@ -265,7 +286,7 @@ class _PlayerRowState extends State<PlayerRow> {
                 'B: ${widget.score.sublist(9, 18).reduce((a, b) => a + b)}',
                 style: TextStyle(
                   color: Colors.black,
-                  fontSize: 16 * scaleFactor,
+                  fontSize: 18,
                 ),
                 textAlign: TextAlign.left,
               ),
@@ -273,7 +294,7 @@ class _PlayerRowState extends State<PlayerRow> {
                 'T: ${widget.score.sublist(0, 9).reduce((a, b) => a + b) + widget.score.sublist(9, 18).reduce((a, b) => a + b)}',
                 style: TextStyle(
                     color: Colors.black,
-                    fontSize: 16 * scaleFactor,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold),
                 textAlign: TextAlign.left,
               ),
