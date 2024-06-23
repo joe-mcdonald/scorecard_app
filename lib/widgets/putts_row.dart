@@ -94,7 +94,7 @@ class _PutterRowState extends State<PutterRow> {
                 hintText: '2',
                 hintStyle: TextStyle(
                   color: Colors.grey,
-                  fontSize: 30 * scaleFactor,
+                  fontSize: 33,
                 ),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
@@ -103,7 +103,7 @@ class _PutterRowState extends State<PutterRow> {
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.black,
-                fontSize: 30 * scaleFactor,
+                fontSize: 33,
               ),
             ),
           ),
@@ -130,10 +130,10 @@ class _PutterRowState extends State<PutterRow> {
               bottomLeft: Radius.circular(12),
             ),
           ),
-          child: Center(
+          child: const Center(
             child: Text(
-              'Putts',
-              style: TextStyle(color: Colors.black, fontSize: 20 * scaleFactor),
+              ' Putts',
+              style: TextStyle(color: Colors.black, fontSize: 20),
               textAlign: TextAlign.center,
               // textScaler: TextScaler.linear(scaleFactor),
             ),

@@ -16,6 +16,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool showFairwayGreen = false;
   bool showPuttsPerHole = false;
   bool showMensHandicap = true;
+  bool matchPlayMode = false;
   Timer? _popupTimer;
 
   @override
@@ -30,15 +31,20 @@ class _SettingsPageState extends State<SettingsPage> {
       showFairwayGreen = prefs.getBool('showFairwayGreen') ?? false;
       showPuttsPerHole = prefs.getBool('showPuttsPerHole') ?? false;
       showMensHandicap = prefs.getBool('mensHandicap') ?? true;
+      matchPlayMode = prefs.getBool('matchPlayMode') ?? false;
     });
   }
 
-  Future<void> _saveSettings(bool showFairwayGreenValue,
-      bool showPuttsPerHoleValue, bool mensHandicapValue) async {
+  Future<void> _saveSettings(
+      bool showFairwayGreenValue,
+      bool showPuttsPerHoleValue,
+      bool mensHandicapValue,
+      bool matchPlayModeValue) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('showFairwayGreen', showFairwayGreenValue);
     await prefs.setBool('showPuttsPerHole', showPuttsPerHoleValue);
     await prefs.setBool('mensHandicap', mensHandicapValue);
+    await prefs.setBool('matchPlayMode', matchPlayModeValue);
   }
 
   void _showPopup() {
@@ -88,7 +94,27 @@ class _SettingsPageState extends State<SettingsPage> {
         children: [
           const Text(
             'Settings',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 35, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              GestureDetector(
+                child: const Text('Match Play Mode',
+                    style: TextStyle(fontSize: 20)),
+              ),
+              CupertinoSwitch(
+                value: matchPlayMode,
+                onChanged: (bool matchPlayModeValue) {
+                  setState(() {
+                    matchPlayMode = matchPlayModeValue;
+                    _saveSettings(showFairwayGreen, showPuttsPerHole,
+                        showMensHandicap, matchPlayModeValue);
+                  });
+                },
+              ),
+            ],
           ),
           const SizedBox(height: 20),
           Row(
@@ -98,7 +124,10 @@ class _SettingsPageState extends State<SettingsPage> {
                 onLongPress: () {
                   _startPopupTimer();
                 },
-                child: const Text('Show Fairway/Green'),
+                child: const Text(
+                  'Show Fairway/Green',
+                  style: TextStyle(fontSize: 20),
+                ),
               ),
               CupertinoSwitch(
                 value: showFairwayGreen,
@@ -106,7 +135,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   setState(() {
                     showFairwayGreen = showFairwayGreenValue;
                     _saveSettings(showFairwayGreenValue, showPuttsPerHole,
-                        showMensHandicap);
+                        showMensHandicap, matchPlayMode);
                   });
                 },
               ),
@@ -117,7 +146,10 @@ class _SettingsPageState extends State<SettingsPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               GestureDetector(
-                child: const Text('Show Putts Per Hole'),
+                child: const Text(
+                  'Show Putts Per Hole',
+                  style: TextStyle(fontSize: 20),
+                ),
               ),
               CupertinoSwitch(
                 value: showPuttsPerHole,
@@ -125,7 +157,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   setState(() {
                     showPuttsPerHole = showPuttsPerHoleValue;
                     _saveSettings(showFairwayGreen, showPuttsPerHoleValue,
-                        showMensHandicap);
+                        showMensHandicap, matchPlayMode);
                   });
                 },
               ),
@@ -136,16 +168,19 @@ class _SettingsPageState extends State<SettingsPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               GestureDetector(
-                child: const Text('Mens Handicap'),
+                child: const Text(
+                  'Mens Handicap',
+                  style: TextStyle(fontSize: 20),
+                ),
               ),
               CupertinoSwitch(
                 value: showMensHandicap,
-                activeColor: CupertinoColors.lightBackgroundGray,
+                // activeColor: CupertinoColors.lightBackgroundGray,
                 onChanged: (bool showMensHandicapValue) {
                   setState(() {
                     showMensHandicap = showMensHandicapValue;
                     _saveSettings(showFairwayGreen, showPuttsPerHole,
-                        showMensHandicapValue);
+                        showMensHandicapValue, matchPlayMode);
                   });
                 },
               ),
@@ -156,7 +191,10 @@ class _SettingsPageState extends State<SettingsPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               GestureDetector(
-                child: const Text('Text Size'),
+                child: const Text(
+                  'Text Size',
+                  style: TextStyle(fontSize: 20),
+                ),
               ),
               CupertinoSlider(
                 value: scaleFactor,

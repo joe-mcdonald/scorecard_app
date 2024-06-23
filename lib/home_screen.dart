@@ -1,8 +1,12 @@
+import 'dart:ffi';
+
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:scorecard_app/scale_factor_provider.dart';
 import 'package:scorecard_app/widgets/course_action_sheet.dart';
+import 'package:scorecard_app/widgets/match_play_results_row.dart';
 import 'package:scorecard_app/widgets/player_row.dart';
 import 'package:scorecard_app/widgets/putts_row.dart';
 import 'package:scorecard_app/widgets/settings_page.dart';
@@ -33,6 +37,9 @@ class _HomeScreenState extends State<HomeScreen> {
   List<TextEditingController> nameControllers = [
     TextEditingController(),
   ];
+  List<TextEditingController> hcapControllers = [
+    TextEditingController(),
+  ];
 
   bool isLoading = true;
   bool showFairwayGreen = false;
@@ -40,12 +47,15 @@ class _HomeScreenState extends State<HomeScreen> {
   List<int> fairwaysHit = List.generate(18, (index) => 0);
   List<int> greensHit = List.generate(18, (index) => 0);
   bool showPutterRow = false;
+  bool matchPlayMode = false;
   List<int> puttsScores = List.generate(18, (index) => 0);
   final List<TextEditingController> puttsControllers =
       List.generate(18, (index) => TextEditingController());
   final List<FocusNode> puttsFocusNodes =
       List.generate(18, (index) => FocusNode());
+  // ignore: unused_field
   int _selectedIndex = 0;
+  List<int> matchPlayResults = List.generate(18, (index) => 0);
 
   String selectedCourse = 'Shaughnessy G&CC';
 
@@ -67,6 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
       List.generate(18, (index) => TextEditingController());
   List<FocusNode> focusNodes = List.generate(18, (index) => FocusNode());
   ScrollController scrollController = ScrollController();
+  bool hasSeenMatchPlayWinDialog = false;
 
   @override
   void initState() {
@@ -100,6 +111,9 @@ class _HomeScreenState extends State<HomeScreen> {
       controller.dispose();
     }
     for (var controller in nameControllers) {
+      controller.dispose();
+    }
+    for (var controller in hcapControllers) {
       controller.dispose();
     }
     for (var controller in controllers) {
@@ -136,6 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _saveState() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('showPuttsRow', showPutterRow);
+    await prefs.setBool('matchPlayMode', matchPlayMode);
     await prefs.setString('puttsScores', jsonEncode(puttsScores));
     await prefs.setString('selectedCourse', selectedCourse);
     await prefs.setString('playerScores', jsonEncode(playersScores));
@@ -143,12 +158,20 @@ class _HomeScreenState extends State<HomeScreen> {
         'nameControllers',
         jsonEncode(
             nameControllers.map((controller) => controller.text).toList()));
+    await prefs.setString(
+        'hcapControllers',
+        jsonEncode(
+            hcapControllers.map((controller) => controller.text).toList()));
   }
 
   Future<void> _loadSavedState() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       showPutterRow = prefs.getBool('showPuttsRow') ?? false;
+      matchPlayMode = prefs.getBool('matchPlayMode') ?? false;
+      if (matchPlayMode && playersScores.length == 2) {
+        _calculateMatchPlay();
+      }
       puttsScores =
           (jsonDecode(prefs.getString('puttsScores') ?? '[]') as List<dynamic>)
               .cast<int>();
@@ -163,6 +186,10 @@ class _HomeScreenState extends State<HomeScreen> {
               as List<dynamic>)
           .map((name) => TextEditingController(text: name))
           .toList();
+      hcapControllers = (jsonDecode(prefs.getString('hcapControllers') ?? '[]')
+              as List<dynamic>)
+          .map((hcap) => TextEditingController(text: hcap))
+          .toList();
     });
 
     if (playersScores.isEmpty) {
@@ -171,6 +198,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (nameControllers.isEmpty) {
       nameControllers = [TextEditingController()];
+    }
+
+    if (hcapControllers.isEmpty) {
+      hcapControllers = [TextEditingController()];
     }
 
     for (int i = 0; i < playersScores.length; i++) {
@@ -192,6 +223,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
+      matchPlayMode = prefs.getBool('matchPlayMode') ?? false;
       showFairwayGreen = prefs.getBool('showFairwayGreen') ?? false;
       showPutterRow = prefs.getBool('showPuttsPerHole') ?? false;
       mensHandicap = prefs.getBool('mensHandicap') ?? false;
@@ -234,11 +266,16 @@ class _HomeScreenState extends State<HomeScreen> {
       greensHit = List.generate(18, (index) => 0);
 
       nameControllers[0].clear();
+      hcapControllers[0].clear();
+
+      matchPlayResults = List.generate(18, (index) => 0);
 
       playersControllers.removeRange(1, playersControllers.length);
       playersScores.removeRange(1, playersScores.length);
       playersFocusNodes.removeRange(1, playersFocusNodes.length);
       nameControllers.removeRange(1, nameControllers.length);
+      hcapControllers.removeRange(1, hcapControllers.length);
+      hasSeenMatchPlayWinDialog = false;
 
       _saveScores();
       _saveState();
@@ -262,17 +299,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return greensHit.where((hit) => hit == 1).length;
   }
 
-  // void _addPlayer() {
-  //   // setState(() {
-  //   //   playersControllers
-  //   //       .add(List.generate(18, (index) => TextEditingController()));
-  //   //   playersScores.add(List.generate(18, (index) => 0));
-  //   //   playersFocusNodes.add(List.generate(18, (index) => FocusNode()));
-  //   //   nameControllers.add(TextEditingController());
-  //   // });
-  //   _showAddPlayerDialog();
-  // }
-
   void _addPlayer() {
     setState(() {
       playersControllers
@@ -280,6 +306,7 @@ class _HomeScreenState extends State<HomeScreen> {
       playersScores.add(List.generate(18, (index) => 0));
       playersFocusNodes.add(List.generate(18, (index) => FocusNode()));
       nameControllers.add(TextEditingController());
+      hcapControllers.add(TextEditingController());
     });
   }
 
@@ -292,204 +319,164 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _showAddPlayerDialog() {
-    TextEditingController nameController = TextEditingController();
+  Future<void> _calculateMatchPlay() async {
+    if (playersScores.length < 2) return;
 
-    showCupertinoDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return CupertinoAlertDialog(
-          title: Text('Add Player'),
-          content: CupertinoTextField(
-            controller: nameController,
-            placeholder: 'Enter player name',
-          ),
-          actions: <Widget>[
-            CupertinoDialogAction(
-              child: Text('Cancel'),
-              onPressed: () {
-                Navigator.pop(context);
-              },
+    int player1Handicap = int.tryParse(hcapControllers[0].text) ?? 0;
+    int player2Handicap = int.tryParse(hcapControllers[1].text) ?? 0;
+    int netStrokes = player1Handicap -
+        player2Handicap; //if negative, player 2 gets strokes, if positive, player 1 gets strokes
+    matchPlayResults = List.generate(18, (index) => 0);
+
+    for (int i = 0; i < 18; i++) {
+      if (playersScores[0][i] == 0 || playersScores[1][i] == 0) {
+        matchPlayResults[i] = 0;
+        setState(() {});
+        return;
+      }
+      bool isHandicapHole;
+      if (mensHandicap) {
+        isHandicapHole = mensHcap[i] <= netStrokes.abs();
+      } else {
+        isHandicapHole = womensHcap[i] <= netStrokes;
+      }
+
+      if (playersScores[0][i] != '' && playersScores[1][i] != '') {
+        if (isHandicapHole) {
+          if (netStrokes > 0) {
+            //player 1 gets extra stroke
+            if ((playersScores[0][i] < playersScores[1][i] + 1)) {
+              if (i == 0) {
+                matchPlayResults[i] = -1; //negative == player 1 lead
+              } else {
+                matchPlayResults[i] = matchPlayResults[i - 1] - 1;
+              }
+            } else if (playersScores[0][i] > playersScores[1][i] + 1) {
+              if (i == 0) {
+                matchPlayResults[i] = 1; //positive  == player 2 lead
+              } else {
+                matchPlayResults[i] = matchPlayResults[i - 1] + 1;
+              }
+            } else {
+              if (i == 0) {
+                matchPlayResults[i] = 0; //tie == nothing changes
+              } else {
+                matchPlayResults[i] = matchPlayResults[i - 1];
+              }
+            }
+          } else if (netStrokes < 0) {
+            if ((playersScores[0][i] + 1 < playersScores[1][i])) {
+              if (i == 0) {
+                matchPlayResults[i] = -1; //negative == player 1 lead
+              } else {
+                matchPlayResults[i] = matchPlayResults[i - 1] - 1;
+              }
+            } else if (playersScores[0][i] + 1 > playersScores[1][i]) {
+              if (i == 0) {
+                matchPlayResults[i] = 1; //positive  == player 2 lead
+              } else {
+                matchPlayResults[i] = matchPlayResults[i - 1] + 1;
+              }
+            } else {
+              if (i == 0) {
+                matchPlayResults[i] = 0; //tie == nothing changes
+              } else {
+                matchPlayResults[i] = matchPlayResults[i - 1];
+              }
+            }
+          }
+        } else {
+          if ((playersScores[0][i] < playersScores[1][i])) {
+            if (i == 0) {
+              matchPlayResults[i] = -1; //negative == player 1 lead
+            } else {
+              matchPlayResults[i] = matchPlayResults[i - 1] - 1;
+            }
+          } else if (playersScores[0][i] > playersScores[1][i]) {
+            if (i == 0) {
+              matchPlayResults[i] = 1; //positive  == player 2 lead
+            } else {
+              matchPlayResults[i] = matchPlayResults[i - 1] + 1;
+            }
+          } else {
+            if (i == 0) {
+              matchPlayResults[i] = 0; //tie == nothing changes
+            } else {
+              matchPlayResults[i] = matchPlayResults[i - 1];
+            }
+          }
+        }
+      } else {
+        matchPlayResults[i] = 0;
+      }
+      if (!hasSeenMatchPlayWinDialog &&
+          ((i == 17 && matchPlayResults[17].abs() >= 1) ||
+              (i == 16 && matchPlayResults[16].abs() >= 2) ||
+              (i == 15 && matchPlayResults[15].abs() >= 3) ||
+              (i == 14 && matchPlayResults[14].abs() >= 4) ||
+              (i == 13 && matchPlayResults[13].abs() >= 5) ||
+              (i == 12 && matchPlayResults[12].abs() >= 6) ||
+              (i == 11 && matchPlayResults[11].abs() >= 7) ||
+              (i == 10 && matchPlayResults[10].abs() >= 8))) {
+        hasSeenMatchPlayWinDialog = true;
+        if (matchPlayResults[i] < 0) {
+          // Player 1 wins
+          showCupertinoDialog(
+            context: context,
+            builder: (BuildContext context) => CupertinoAlertDialog(
+              title: Text('${nameControllers[0].text} Wins!'),
+              content:
+                  Text('${nameControllers[0].text} has won the match play.'),
+              actions: <CupertinoDialogAction>[
+                CupertinoDialogAction(
+                  child: const Text('OK'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
             ),
-            CupertinoDialogAction(
-              child: Text('Add'),
-              onPressed: () {
-                if (nameController.text.isNotEmpty) {
-                  setState(() {
-                    playersControllers.add(
-                        List.generate(18, (index) => TextEditingController()));
-                    playersScores.add(List.generate(18, (index) => 0));
-                    playersFocusNodes
-                        .add(List.generate(18, (index) => FocusNode()));
-                    nameControllers
-                        .add(TextEditingController(text: nameController.text));
-                    _saveState(); // Save state after adding a player
-                  });
-                  Navigator.pop(context);
-                }
-              },
+          );
+        } else if (matchPlayResults[i] > 0) {
+          // Player 2 wins
+          showCupertinoDialog(
+            context: context,
+            builder: (BuildContext context) => CupertinoAlertDialog(
+              title: Text('${nameControllers[1].text} Wins!'),
+              content:
+                  Text('${nameControllers[1].text} has won the match play.'),
+              actions: <CupertinoDialogAction>[
+                CupertinoDialogAction(
+                  child: const Text('OK'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
             ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showRemovePlayerDialog(int index) {
-    showCupertinoDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return CupertinoAlertDialog(
-          title: Text('Remove Player'),
-          content: Text('Are you sure you want to remove this player?'),
-          actions: <Widget>[
-            CupertinoDialogAction(
-              child: Text('Cancel'),
-              onPressed: () {
-                Navigator.pop(context);
-              },
-            ),
-            CupertinoDialogAction(
-              child: Text('Remove'),
-              onPressed: () {
-                setState(() {
-                  playersControllers.removeAt(index);
-                  playersScores.removeAt(index);
-                  playersFocusNodes.removeAt(index);
-                  nameControllers.removeAt(index);
-                  _saveState(); // Save state after removing a player
-                });
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  //potentially remove everything from here to build
-  void _onCourseDataLoaded(
-      List<int> loadedPar,
-      List<int> loadedMensHcap,
-      List<int> loadedWomensHcap,
-      List<String> loadedTees,
-      Map<String, List<int>> loadedYardages,
-      String loadedSelectedTee) {
-    setState(() {
-      par = loadedPar;
-      mensHcap = loadedMensHcap;
-      womensHcap = loadedWomensHcap;
-      tees = loadedTees;
-      yardages = loadedYardages;
-      selectedTee = loadedSelectedTee;
-      isLoading = false;
-    });
-  }
-
-  Future<void> _savePutts() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('puttsScores', jsonEncode(puttsScores));
-  }
-
-  Future<void> _loadScores() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      score = (jsonDecode(prefs.getString('score') ?? '[]') as List<dynamic>)
-          .cast<int>();
-      fairwaysHit =
-          (jsonDecode(prefs.getString('fairwaysHit') ?? '[]') as List<dynamic>)
-              .cast<int>();
-      greensHit =
-          (jsonDecode(prefs.getString('greensHit') ?? '[]') as List<dynamic>)
-              .cast<int>();
-
-      if (score.length != 18) {
-        score = List.generate(18, (index) => 0);
+          );
+        }
+        // showCupertinoDialog(
+        //   context: context,
+        //   builder: (BuildContext context) => CupertinoAlertDialog(
+        //     title: Text('${nameControllers[0].text} Wins!'),
+        //     content:
+        //         Text('${nameControllers[0].text}  has won the match play.'),
+        //     actions: <CupertinoDialogAction>[
+        //       CupertinoDialogAction(
+        //         child: const Text('OK'),
+        //         onPressed: () {
+        //           Navigator.of(context).pop();
+        //         },
+        //       ),
+        //     ],
+        //   ),
+        // );
       }
-      if (fairwaysHit.length != 18) {
-        fairwaysHit = List.generate(18, (index) => 0);
-      }
-      if (greensHit.length != 18) {
-        greensHit = List.generate(18, (index) => 0);
-      }
+    }
 
-      for (int i = 0; i < controllers.length; i++) {
-        controllers[i].text = score[i] != 0 ? score[i].toString() : '';
-      }
-    });
-  }
-
-  Future<void> _loadPutts() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      puttsScores =
-          (jsonDecode(prefs.getString('puttsScores') ?? '[]') as List<dynamic>)
-              .cast<int>();
-
-      if (puttsScores.isEmpty) {
-        puttsScores = List.generate(18, (index) => 0);
-      }
-      for (int i = 0; i < puttsControllers.length; i++) {
-        puttsControllers[i].text =
-            puttsScores[i] != 0 ? puttsScores[i].toString() : '';
-      }
-    });
-  }
-
-  // Future<void> _loadSavedState() async {
-  //   final prefs = await SharedPreferences.getInstance();
-  //   setState(() {
-  //     showPutterRow = prefs.getBool('showPuttsRow') ?? false;
-  //     puttsScores =
-  //         (jsonDecode(prefs.getString('puttsScore') ?? '[]') as List<dynamic>)
-  //             .cast<int>();
-  //     selectedCourse = prefs.getString('selectedCourse') ?? '';
-  //     playersScores =
-  //         (jsonDecode(prefs.getString('playerScores') ?? '[]') as List<dynamic>)
-  //             .map((e) => (e as List<dynamic>).cast<int>())
-  //             .toList();
-  //     nameControllers = (jsonDecode(prefs.getString('nameControllers') ?? '[]')
-  //             as List<dynamic>)
-  //         .map((name) => TextEditingController(text: name))
-  //         .toList();
-  //     // Ensure at least one player row is present
-  //     if (playersScores.isEmpty) {
-  //       playersScores.add(List.generate(18, (index) => 0));
-  //       nameControllers.add(TextEditingController());
-  //     }
-  //     // Ensure controllers and focus nodes are properly initialized
-  //     for (int i = playersControllers.length; i < playersScores.length; i++) {
-  //       playersControllers
-  //           .add(List.generate(18, (index) => TextEditingController()));
-  //       playersFocusNodes.add(List.generate(18, (index) => FocusNode()));
-  //     }
-  //   });
-  // }
-
-  void _togglePutterRow() {
-    setState(() {
-      showPutterRow = !showPutterRow;
-    });
-  }
-
-  // void _addPlayer() {
-  //   setState(() {
-  //     playersControllers
-  //         .add(List.generate(18, (index) => TextEditingController()));
-  //     playersScores.add(List.generate(18, (index) => 0));
-  //     playersFocusNodes.add(List.generate(18, (index) => FocusNode()));
-  //     nameControllers.add(TextEditingController());
-  //     _saveState();
-  //   });
-  // }
-
-  void _addPutter() {
-    setState(() {
-      showPutterRow = true;
-      _loadPutts();
-      _saveState();
-    });
+    // Trigger a rebuild to display the results
+    setState(() {});
   }
 
   void _shareRoundDetails() {
@@ -521,6 +508,14 @@ class _HomeScreenState extends State<HomeScreen> {
     return details.toString();
   }
 
+  bool isHandicapHole(int index, int handicapDifference) {
+    if (mensHandicap) {
+      return mensHcap[index] <= handicapDifference.abs();
+    } else {
+      return womensHcap[index] <= handicapDifference.abs();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final scaleFactor = Provider.of<ScaleFactorProvider>(context).scaleFactor;
@@ -535,7 +530,6 @@ class _HomeScreenState extends State<HomeScreen> {
         body: const Center(child: CircularProgressIndicator()),
       );
     }
-
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 0, 120, 79),
@@ -585,28 +579,30 @@ class _HomeScreenState extends State<HomeScreen> {
             backgroundColor: const Color.fromARGB(255, 0, 120, 79),
             shadowColor: Colors.black,
           ),
-          child: Text(
+          child: AutoSizeText(
             selectedCourse.isEmpty ? 'Select Course' : selectedCourse,
-            style: const TextStyle(color: Colors.white, fontSize: 18),
+            style: const TextStyle(color: Colors.white),
+            maxFontSize: 26,
+            minFontSize: 16,
+            textAlign: TextAlign.center,
           ),
         ),
         actions: [
           TextButton(
             child: Text(
               selectedTee,
-              style: TextStyle(color: Colors.white, fontSize: 15),
+              style: const TextStyle(color: Colors.white, fontSize: 15),
             ),
             onPressed: () {
               showCupertinoModalPopup<void>(
                 context: context,
                 builder: (BuildContext context) => SizedBox(
-                  height: 350,
+                  height: 400,
                   child: CupertinoActionSheet(
-                    title: Text('Tees',
-                        style: TextStyle(fontSize: 15 * scaleFactor)),
-                    message: Text(
+                    title: const Text('Tees', style: TextStyle(fontSize: 30)),
+                    message: const Text(
                       'Select a tee.',
-                      style: TextStyle(fontSize: 12 * scaleFactor),
+                      style: TextStyle(fontSize: 30),
                     ),
                     actions: tees.map((tee) {
                       return CupertinoActionSheetAction(
@@ -618,7 +614,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         },
                         child: Text(
                           tee,
-                          style: TextStyle(fontSize: 15 * scaleFactor),
+                          style: const TextStyle(fontSize: 30),
                         ),
                       );
                     }).toList(),
@@ -644,7 +640,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
                   controller: scrollController,
-                  physics: const ClampingScrollPhysics(),
+                  physics: const ClampingScrollPhysics(), // Add this line
                   child: Column(
                     children: [
                       Padding(
@@ -657,8 +653,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 width: 100 * scaleFactor,
                                 height: 110 * scaleFactor,
                                 margin: EdgeInsets.all(2 * scaleFactor),
+                                // color: Colors.white,
                                 decoration: BoxDecoration(
                                   color: Colors.white,
+                                  // handicapHole ? Colors.grey : Colors.white,
                                   borderRadius: BorderRadius.only(
                                     topLeft: index == 0
                                         ? const Radius.circular(12)
@@ -680,36 +678,34 @@ class _HomeScreenState extends State<HomeScreen> {
                                       const SizedBox(height: 5),
                                       Text(
                                         'Hole ${index + 1}',
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                             color: Colors.black,
                                             fontWeight: FontWeight.bold,
-                                            fontSize: 20 * scaleFactor),
+                                            fontSize: 20),
                                       ),
                                       Text(
                                         'Par ${par[index]}',
-                                        style: TextStyle(
-                                            color: Colors.black,
-                                            fontSize: 14 * scaleFactor),
+                                        style: const TextStyle(
+                                            color: Colors.black, fontSize: 16),
                                       ),
                                       Text(
                                         '${yardages[selectedTee]?[index] ?? 0} yards',
-                                        style: TextStyle(
-                                            color: Colors.black,
-                                            fontSize: 14 * scaleFactor),
+                                        style: const TextStyle(
+                                            color: Colors.black, fontSize: 16),
                                       ),
                                       if (mensHandicap == true)
                                         Text(
                                           'HCap: ${mensHcap[index]}',
-                                          style: TextStyle(
+                                          style: const TextStyle(
                                               color: Colors.black,
-                                              fontSize: 14 * scaleFactor),
+                                              fontSize: 16),
                                         ),
                                       if (mensHandicap == false)
                                         Text(
                                           'HCap: ${womensHcap[index]}',
-                                          style: TextStyle(
+                                          style: const TextStyle(
                                               color: Colors.black,
-                                              fontSize: 14 * scaleFactor),
+                                              fontSize: 16),
                                         ),
                                     ],
                                   ),
@@ -729,6 +725,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         List<int> scores = playersScores[playerIndex];
                         TextEditingController nameController =
                             nameControllers[playerIndex];
+                        TextEditingController hcapController = hcapControllers[
+                            playerIndex]; // Add handicap controller
                         return PlayerRow(
                           index: playerIndex,
                           score: scores,
@@ -738,28 +736,22 @@ class _HomeScreenState extends State<HomeScreen> {
                           focusNodes: focusNodes,
                           controllers: controllers,
                           nameController: nameController,
+                          hcapController: hcapController,
                           scrollController: scrollController,
                           removePlayer: _removePlayer,
+                          onScoreChanged: _calculateMatchPlay, // Add this line
+                          matchPlayEnabled: matchPlayMode,
                         );
-                      }).toList(),
-                      // ...playersControllers.asMap().entries.map((entry) {
-                      //   int playerIndex = entry.key;
-                      //   List<TextEditingController> controllers = entry.value;
-                      //   List<FocusNode> focusNodes = playersFocusNodes[playerIndex];
-                      //   List<int> scores = playersScores[playerIndex];
-                      //   TextEditingController nameController = nameControllers[playerIndex];
-                      //   return PlayerRow(
-                      //     score: scores,
-                      //     fairwaysHit: fairwaysHit,
-                      //     greensHit: greensHit,
-                      //     par: par,
-                      //     focusNodes: focusNodes,
-                      //     controllers: controllers,
-                      //     nameController: nameController,
-                      //     // nameController: TextEditingController(),
-                      //     scrollController: scrollController,
-                      //   );
-                      // }),
+                      }),
+                      if (matchPlayMode && playersScores.length == 2)
+                        MatchPlayResultsRow(
+                          matchPlayResults: matchPlayResults,
+                          playerNames: [
+                            nameControllers[0].text,
+                            nameControllers[1].text
+                          ],
+                        ),
+
                       if (showPutterRow)
                         Padding(
                           padding: EdgeInsets.only(left: 0 * scaleFactor),
@@ -896,11 +888,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       Text(
                         'Fairways Hit: ${_countFairwaysHit()}/${par.where((p) => p == 4 || p == 5).length}',
-                        style: TextStyle(fontSize: 11),
+                        style: const TextStyle(fontSize: 11),
                       ),
                       Text(
                         'Greens Hit: ${_countGreensHit()}/18',
-                        style: TextStyle(fontSize: 11),
+                        style: const TextStyle(fontSize: 11),
                       ),
                     ],
                   ),

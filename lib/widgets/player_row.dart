@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -14,8 +15,11 @@ class PlayerRow extends StatefulWidget {
   final List<FocusNode> focusNodes;
   final List<TextEditingController> controllers;
   final TextEditingController nameController;
+  final TextEditingController hcapController;
   final ScrollController scrollController;
   final Function(int) removePlayer;
+  final VoidCallback onScoreChanged;
+  final bool matchPlayEnabled;
 
   const PlayerRow({
     super.key,
@@ -27,8 +31,11 @@ class PlayerRow extends StatefulWidget {
     required this.focusNodes,
     required this.controllers,
     required this.nameController,
+    required this.hcapController,
     required this.scrollController,
     required this.removePlayer,
+    required this.onScoreChanged,
+    required this.matchPlayEnabled,
   });
 
   @override
@@ -44,6 +51,14 @@ class _PlayerRowState extends State<PlayerRow> {
   }
 
   Widget _buildTextField(int index, double scaleFactor) {
+    Color textColor = Colors.black; // Default color
+    if (widget.matchPlayEnabled) {
+      if (widget.index == 0) {
+        textColor = Colors.red; // Player 1's color
+      } else if (widget.index == 1) {
+        textColor = const Color.fromARGB(198, 0, 0, 255); // Player 2's color
+      }
+    }
     return Stack(
       alignment: Alignment.center,
       children: [
@@ -67,50 +82,47 @@ class _PlayerRowState extends State<PlayerRow> {
                 );
               });
             },
-            child: TextField(
-              focusNode: widget.focusNodes[index],
-              controller: widget.controllers[index],
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              onTap: () {
-                setState(() {
-                  widget.focusNodes[index].requestFocus();
-                  widget.controllers[index].selection = TextSelection(
-                    baseOffset: 0,
-                    extentOffset: widget.controllers[index].text.length,
-                  );
-                  // double screenWidth = MediaQuery.of(context).size.width;
-                  // double targetScrollPosition =
-                  //     (index * 105.0 + 10) - (screenWidth / 2 - 100);
-                  // widget.scrollController.animateTo(
-                  //   targetScrollPosition,
-                  //   duration: const Duration(milliseconds: 10),
-                  //   curve: Curves.easeInOut,
-                  // );
-                });
-              },
-              onChanged: (text) {
-                int? value = int.tryParse(text);
-                if (value != null) {
+            child: Center(
+              child: TextField(
+                focusNode: widget.focusNodes[index],
+                controller: widget.controllers[index],
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                onTap: () {
                   setState(() {
-                    widget.score[index] = value;
-                    _saveScores();
+                    widget.focusNodes[index].requestFocus();
+                    widget.controllers[index].selection = TextSelection(
+                      baseOffset: 0,
+                      extentOffset: widget.controllers[index].text.length,
+                    );
                   });
-                } else {
-                  setState(() {
-                    widget.score[index] = 0;
-                    _saveScores();
-                  });
-                }
-              },
-              decoration: InputDecoration(
-                hintText: '${widget.par[index]}',
-                hintStyle:
-                    TextStyle(color: Colors.grey, fontSize: 30 * scaleFactor),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
+                },
+                onChanged: (text) {
+                  int? value = int.tryParse(text);
+                  if (value != null) {
+                    setState(() {
+                      widget.score[index] = value;
+                      _saveScores();
+                      widget
+                          .onScoreChanged(); // Call the callback when score changes
+                    });
+                  } else {
+                    setState(() {
+                      widget.score[index] = 0;
+                      _saveScores();
+                      widget
+                          .onScoreChanged(); // Call the callback when score changes
+                    });
+                  }
+                },
+                decoration: InputDecoration(
+                  hintText: '${widget.par[index]}',
+                  hintStyle: TextStyle(color: Colors.grey, fontSize: 33),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                style: TextStyle(color: textColor, fontSize: 33),
               ),
-              style: TextStyle(color: Colors.black, fontSize: 30 * scaleFactor),
             ),
           ),
         ),
@@ -131,51 +143,49 @@ class _PlayerRowState extends State<PlayerRow> {
     double scaleFactor = Provider.of<ScaleFactorProvider>(context).scaleFactor;
     return Row(
       children: [
-        // Container(
-        //   width: 80 * scaleFactor,
-        //   height: 40 * scaleFactor,
-        //   margin: EdgeInsets.all(2 * scaleFactor),
-        //   decoration: const BoxDecoration(
-        //     color: Colors.white,
-        //     borderRadius: BorderRadius.only(
-        //       topRight: Radius.circular(12),
-        //       bottomRight: Radius.circular(12),
-        //       topLeft: Radius.circular(12),
-        //       bottomLeft: Radius.circular(12),
-        //     ),
-        //   ),
-        //   child: TextField(
-        //     controller: widget.nameController,
-        //     maxLength: 5,
-        //     decoration: InputDecoration(
-        //       counterText: '',
-        //       hintText: 'Name',
-        //       border: InputBorder.none,
-        //       contentPadding: EdgeInsets.symmetric(horizontal: 8 * scaleFactor),
-        //     ),
-        //     textAlign: TextAlign.center,
-        //     style: TextStyle(color: Colors.black, fontSize: 20 * scaleFactor),
-        //   ),
-        // ),
         GestureDetector(
           onTap: () {
             showCupertinoDialog(
               context: context,
               builder: (context) => CupertinoAlertDialog(
-                title: Text('Name'),
-                content: CupertinoTextField(
-                  controller: widget.nameController,
-                  maxLength: 5,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.black),
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                  ),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.black, fontSize: 20),
+                content: Column(
+                  children: [
+                    CupertinoTextField(
+                      controller: widget.nameController,
+                      maxLength: 5,
+                      placeholder: 'Name',
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: Colors.transparent),
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(12)),
+                      ),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.black, fontSize: 20),
+                    ),
+                    const SizedBox(height: 20),
+                    CupertinoTextField(
+                      controller: widget.hcapController,
+                      placeholder: 'Handicap',
+                      keyboardType: const TextInputType.numberWithOptions(
+                        signed: false,
+                        decimal: true,
+                      ),
+                      maxLength: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: Colors.transparent),
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(12)),
+                      ),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.black, fontSize: 20),
+                    ),
+                  ],
                 ),
                 actions: [
                   CupertinoDialogAction(
-                    child: Text(
+                    child: const Text(
                       'Remove Player',
                       style: TextStyle(color: CupertinoColors.systemRed),
                     ),
@@ -186,7 +196,7 @@ class _PlayerRowState extends State<PlayerRow> {
                     },
                   ),
                   CupertinoDialogAction(
-                    child: Text(
+                    child: const Text(
                       'OK',
                       style: TextStyle(color: CupertinoColors.activeBlue),
                     ),
@@ -213,13 +223,13 @@ class _PlayerRowState extends State<PlayerRow> {
               ),
             ),
             child: Center(
-              child: Text(
+              child: AutoSizeText(
                 (widget.nameController.text).isEmpty
                     ? 'Name'
                     : widget.nameController.text,
                 style: TextStyle(
                   color: Colors.black,
-                  fontSize: 20 * scaleFactor,
+                  fontSize: 30,
                 ),
               ),
             ),
@@ -242,7 +252,10 @@ class _PlayerRowState extends State<PlayerRow> {
               child: SizedBox(
                 width: double.infinity,
                 height: double.infinity,
-                child: _buildTextField(index, scaleFactor),
+                child: _buildTextField(
+                  index,
+                  scaleFactor,
+                ),
               ),
             ),
           );
@@ -265,7 +278,7 @@ class _PlayerRowState extends State<PlayerRow> {
                 'F: ${widget.score.sublist(0, 9).reduce((a, b) => a + b)}',
                 style: TextStyle(
                   color: Colors.black,
-                  fontSize: 16 * scaleFactor,
+                  fontSize: 18,
                 ),
                 textAlign: TextAlign.left,
               ),
@@ -273,7 +286,7 @@ class _PlayerRowState extends State<PlayerRow> {
                 'B: ${widget.score.sublist(9, 18).reduce((a, b) => a + b)}',
                 style: TextStyle(
                   color: Colors.black,
-                  fontSize: 16 * scaleFactor,
+                  fontSize: 18,
                 ),
                 textAlign: TextAlign.left,
               ),
@@ -281,7 +294,7 @@ class _PlayerRowState extends State<PlayerRow> {
                 'T: ${widget.score.sublist(0, 9).reduce((a, b) => a + b) + widget.score.sublist(9, 18).reduce((a, b) => a + b)}',
                 style: TextStyle(
                     color: Colors.black,
-                    fontSize: 16 * scaleFactor,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold),
                 textAlign: TextAlign.left,
               ),
