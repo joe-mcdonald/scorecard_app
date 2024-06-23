@@ -33,6 +33,9 @@ class _HomeScreenState extends State<HomeScreen> {
   List<TextEditingController> nameControllers = [
     TextEditingController(),
   ];
+  List<TextEditingController> hcapControllers = [
+    TextEditingController(),
+  ];
 
   bool isLoading = true;
   bool showFairwayGreen = false;
@@ -102,6 +105,9 @@ class _HomeScreenState extends State<HomeScreen> {
     for (var controller in nameControllers) {
       controller.dispose();
     }
+    for (var controller in hcapControllers) {
+      controller.dispose();
+    }
     for (var controller in controllers) {
       controller.dispose();
     }
@@ -143,6 +149,10 @@ class _HomeScreenState extends State<HomeScreen> {
         'nameControllers',
         jsonEncode(
             nameControllers.map((controller) => controller.text).toList()));
+    await prefs.setString(
+        'hcapControllers',
+        jsonEncode(
+            hcapControllers.map((controller) => controller.text).toList()));
   }
 
   Future<void> _loadSavedState() async {
@@ -163,6 +173,10 @@ class _HomeScreenState extends State<HomeScreen> {
               as List<dynamic>)
           .map((name) => TextEditingController(text: name))
           .toList();
+      hcapControllers = (jsonDecode(prefs.getString('hcapControllers') ?? '[]')
+              as List<dynamic>)
+          .map((hcap) => TextEditingController(text: hcap))
+          .toList();
     });
 
     if (playersScores.isEmpty) {
@@ -171,6 +185,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (nameControllers.isEmpty) {
       nameControllers = [TextEditingController()];
+    }
+
+    if (hcapControllers.isEmpty) {
+      hcapControllers = [TextEditingController()];
     }
 
     for (int i = 0; i < playersScores.length; i++) {
@@ -234,11 +252,13 @@ class _HomeScreenState extends State<HomeScreen> {
       greensHit = List.generate(18, (index) => 0);
 
       nameControllers[0].clear();
+      hcapControllers[0].clear();
 
       playersControllers.removeRange(1, playersControllers.length);
       playersScores.removeRange(1, playersScores.length);
       playersFocusNodes.removeRange(1, playersFocusNodes.length);
       nameControllers.removeRange(1, nameControllers.length);
+      hcapControllers.removeRange(1, hcapControllers.length);
 
       _saveScores();
       _saveState();
@@ -262,17 +282,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return greensHit.where((hit) => hit == 1).length;
   }
 
-  // void _addPlayer() {
-  //   // setState(() {
-  //   //   playersControllers
-  //   //       .add(List.generate(18, (index) => TextEditingController()));
-  //   //   playersScores.add(List.generate(18, (index) => 0));
-  //   //   playersFocusNodes.add(List.generate(18, (index) => FocusNode()));
-  //   //   nameControllers.add(TextEditingController());
-  //   // });
-  //   _showAddPlayerDialog();
-  // }
-
   void _addPlayer() {
     setState(() {
       playersControllers
@@ -280,6 +289,7 @@ class _HomeScreenState extends State<HomeScreen> {
       playersScores.add(List.generate(18, (index) => 0));
       playersFocusNodes.add(List.generate(18, (index) => FocusNode()));
       nameControllers.add(TextEditingController());
+      hcapControllers.add(TextEditingController());
     });
   }
 
@@ -357,6 +367,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   playersScores.removeAt(index);
                   playersFocusNodes.removeAt(index);
                   nameControllers.removeAt(index);
+                  hcapControllers.removeAt(index);
                   _saveState(); // Save state after removing a player
                 });
                 Navigator.pop(context);
@@ -729,6 +740,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         List<int> scores = playersScores[playerIndex];
                         TextEditingController nameController =
                             nameControllers[playerIndex];
+                        TextEditingController hcapController = hcapControllers[
+                            playerIndex]; // Add handicap controller
                         return PlayerRow(
                           index: playerIndex,
                           score: scores,
@@ -738,6 +751,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           focusNodes: focusNodes,
                           controllers: controllers,
                           nameController: nameController,
+                          hcapController: hcapController,
                           scrollController: scrollController,
                           removePlayer: _removePlayer,
                         );

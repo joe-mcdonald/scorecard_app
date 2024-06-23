@@ -14,6 +14,7 @@ class PlayerRow extends StatefulWidget {
   final List<FocusNode> focusNodes;
   final List<TextEditingController> controllers;
   final TextEditingController nameController;
+  final TextEditingController hcapController;
   final ScrollController scrollController;
   final Function(int) removePlayer;
 
@@ -27,6 +28,7 @@ class PlayerRow extends StatefulWidget {
     required this.focusNodes,
     required this.controllers,
     required this.nameController,
+    required this.hcapController,
     required this.scrollController,
     required this.removePlayer,
   });
@@ -79,14 +81,6 @@ class _PlayerRowState extends State<PlayerRow> {
                     baseOffset: 0,
                     extentOffset: widget.controllers[index].text.length,
                   );
-                  // double screenWidth = MediaQuery.of(context).size.width;
-                  // double targetScrollPosition =
-                  //     (index * 105.0 + 10) - (screenWidth / 2 - 100);
-                  // widget.scrollController.animateTo(
-                  //   targetScrollPosition,
-                  //   duration: const Duration(milliseconds: 10),
-                  //   curve: Curves.easeInOut,
-                  // );
                 });
               },
               onChanged: (text) {
@@ -131,51 +125,49 @@ class _PlayerRowState extends State<PlayerRow> {
     double scaleFactor = Provider.of<ScaleFactorProvider>(context).scaleFactor;
     return Row(
       children: [
-        // Container(
-        //   width: 80 * scaleFactor,
-        //   height: 40 * scaleFactor,
-        //   margin: EdgeInsets.all(2 * scaleFactor),
-        //   decoration: const BoxDecoration(
-        //     color: Colors.white,
-        //     borderRadius: BorderRadius.only(
-        //       topRight: Radius.circular(12),
-        //       bottomRight: Radius.circular(12),
-        //       topLeft: Radius.circular(12),
-        //       bottomLeft: Radius.circular(12),
-        //     ),
-        //   ),
-        //   child: TextField(
-        //     controller: widget.nameController,
-        //     maxLength: 5,
-        //     decoration: InputDecoration(
-        //       counterText: '',
-        //       hintText: 'Name',
-        //       border: InputBorder.none,
-        //       contentPadding: EdgeInsets.symmetric(horizontal: 8 * scaleFactor),
-        //     ),
-        //     textAlign: TextAlign.center,
-        //     style: TextStyle(color: Colors.black, fontSize: 20 * scaleFactor),
-        //   ),
-        // ),
         GestureDetector(
           onTap: () {
             showCupertinoDialog(
               context: context,
               builder: (context) => CupertinoAlertDialog(
-                title: Text('Name'),
-                content: CupertinoTextField(
-                  controller: widget.nameController,
-                  maxLength: 5,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.black),
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                  ),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.black, fontSize: 20),
+                content: Column(
+                  children: [
+                    CupertinoTextField(
+                      controller: widget.nameController,
+                      maxLength: 5,
+                      placeholder: 'Name',
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: Colors.transparent),
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(12)),
+                      ),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.black, fontSize: 20),
+                    ),
+                    const SizedBox(height: 20),
+                    CupertinoTextField(
+                      controller: widget.hcapController,
+                      placeholder: 'Handicap',
+                      keyboardType: const TextInputType.numberWithOptions(
+                        signed: false,
+                        decimal: true,
+                      ),
+                      maxLength: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: Colors.transparent),
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(12)),
+                      ),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.black, fontSize: 20),
+                    ),
+                  ],
                 ),
                 actions: [
                   CupertinoDialogAction(
-                    child: Text(
+                    child: const Text(
                       'Remove Player',
                       style: TextStyle(color: CupertinoColors.systemRed),
                     ),
@@ -186,7 +178,7 @@ class _PlayerRowState extends State<PlayerRow> {
                     },
                   ),
                   CupertinoDialogAction(
-                    child: Text(
+                    child: const Text(
                       'OK',
                       style: TextStyle(color: CupertinoColors.activeBlue),
                     ),
