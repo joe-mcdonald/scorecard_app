@@ -66,7 +66,6 @@ class _PutterRowState extends State<PutterRow> {
                   // double screenWidth = MediaQuery.of(context).size.width;
                   // double targetScrollPosition =
                   //     (index * 105.0 + 10) - (screenWidth / 2 - 100);
-
                   // widget.scrollController.animateTo(
                   //   targetScrollPosition,
                   //   duration: const Duration(milliseconds: 10),
@@ -90,7 +89,7 @@ class _PutterRowState extends State<PutterRow> {
                   });
                 }
               },
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 hintText: '2',
                 hintStyle: TextStyle(
                   color: Colors.grey,
@@ -101,7 +100,7 @@ class _PutterRowState extends State<PutterRow> {
               ),
               keyboardType: TextInputType.number,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.black,
                 fontSize: 33,
               ),
@@ -111,6 +110,25 @@ class _PutterRowState extends State<PutterRow> {
       ],
     );
   }
+
+  // String _calculateAveragePutts() {
+  //   if (widget.putts.isNotEmpty) {
+  //     final average =
+  //         widget.putts.reduce((a, b) => a + b) / widget.putts.length;
+  //     return average.toStringAsFixed(
+  //         2); // Rounds to 2 decimal places for better readability
+  //   } else {
+  //     return "N/A";
+  //   }
+  // }
+
+  // String _calculateTotalPutts() {
+  //   if (widget.putts.isNotEmpty) {
+  //     return widget.putts.reduce((a, b) => a + b).toString();
+  //   } else {
+  //     return "N/A";
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -161,23 +179,32 @@ class _PutterRowState extends State<PutterRow> {
             ),
           );
         }),
-
-        // TODO: turn this column into a 'average putts per hole' column
-
         Container(
           width: 100 * scaleFactor,
           height: 80 * scaleFactor,
           margin: EdgeInsets.all(2 * scaleFactor),
           decoration: const BoxDecoration(
-            color: Colors.white,
+            color: Colors.transparent,
             borderRadius: BorderRadius.only(
               topRight: Radius.circular(12),
               bottomRight: Radius.circular(12),
             ),
           ),
-          child: Column(
+          child: const Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: [],
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Text(
+              //   'Average Putts: ${_calculateAveragePutts()}',
+              //   style: const TextStyle(fontSize: 15),
+              //   textAlign: TextAlign.start,
+              // ),
+              // const SizedBox(height: 10),
+              // Text(
+              //   "Total: ${_calculateTotalPutts()}",
+              //   style: const TextStyle(fontSize: 15),
+              // ),
+            ],
           ),
         ),
       ],

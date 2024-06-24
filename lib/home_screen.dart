@@ -1,5 +1,3 @@
-import 'dart:ffi';
-
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -59,19 +57,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String selectedCourse = 'Shaughnessy G&CC';
 
-  List<int> par = [];
+  // List<int> par = [];
   List<String> tees = [];
   List<int> mensHcap = [];
   List<int> womensHcap = [];
   String selectedTee = '';
   Map<String, List<int>> yardages = {};
+  Map<String, List<int>> pars = {};
 
   List<int> score = List.generate(18, (index) => 0);
-
-  // int get frontNineScore => score.sublist(0, 9).reduce((a, b) => a + b);
-  // int get backNineScore => score.sublist(9, 18).reduce((a, b) => a + b);
-  // int get frontNinePar => par.sublist(0, 9).reduce((a, b) => a + b);
-  // int get backNinePar => par.sublist(9, 18).reduce((a, b) => a + b);
 
   List<TextEditingController> controllers =
       List.generate(18, (index) => TextEditingController());
@@ -123,18 +117,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadCourseData(String course) async {
-    final rawData = await rootBundle.loadString('assets/$course.csv');
+    final rawData = await rootBundle.loadString('assets/$course - Sheet1.csv');
     List<List<dynamic>> csvData = const CsvToListConverter().convert(rawData);
     setState(() {
-      par = csvData[2].sublist(1).map((e) => e as int).toList();
       mensHcap = csvData[3].sublist(1).map((e) => e as int).toList();
       womensHcap = csvData[4].sublist(1).map((e) => e as int).toList();
       tees = csvData.map((row) => row[0].toString()).skip(5).toList();
       for (var row in csvData.skip(5)) {
         String teeName = row[0];
         List<int> yardage = row.sublist(1).map((e) => e as int).toList();
+        List<int> par = row.sublist(19).map((e) => e as int).toList();
         yardages[teeName] = yardage;
+        pars[teeName] = par;
       }
+      // par = csvData[2].sublist(1).map((e) => e as int).toList();
       selectedTee = tees[0];
       isLoading = false;
     });
@@ -341,6 +337,7 @@ class _HomeScreenState extends State<HomeScreen> {
         isHandicapHole = womensHcap[i] <= netStrokes;
       }
 
+      // ignore: unrelated_type_equality_checks
       if (playersScores[0][i] != '' && playersScores[1][i] != '') {
         if (isHandicapHole) {
           if (netStrokes > 0) {
@@ -548,14 +545,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     selectedTee = tee;
                   });
                 },
-                onCourseDataLoaded: (loadedPar,
+                onCourseDataLoaded: (loadedPars,
                     loadedMensHcap,
                     loadedWomensHcap,
                     loadedTees,
                     loadedYardages,
                     loadedSelectedTee) {
                   setState(() {
-                    par = loadedPar;
+                    pars = loadedPars;
                     mensHcap = loadedMensHcap;
                     womensHcap = loadedWomensHcap;
                     tees = loadedTees;
@@ -564,7 +561,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     isLoading = false;
                   });
                 },
-                par: par,
+                pars: pars,
                 mensHcap: mensHcap,
                 womensHcap: womensHcap,
                 tees: tees,
@@ -599,10 +596,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 builder: (BuildContext context) => SizedBox(
                   height: 400,
                   child: CupertinoActionSheet(
-                    title: const Text('Tees', style: TextStyle(fontSize: 30)),
+                    title: const Text('Tees', style: TextStyle(fontSize: 25)),
                     message: const Text(
                       'Select a tee.',
-                      style: TextStyle(fontSize: 30),
+                      style: TextStyle(fontSize: 20),
                     ),
                     actions: tees.map((tee) {
                       return CupertinoActionSheetAction(
@@ -614,7 +611,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         },
                         child: Text(
                           tee,
-                          style: const TextStyle(fontSize: 30),
+                          style: const TextStyle(fontSize: 20),
                         ),
                       );
                     }).toList(),
@@ -684,7 +681,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             fontSize: 20),
                                       ),
                                       Text(
-                                        'Par ${par[index]}',
+                                        'Par ${pars[selectedTee]?[index]}',
                                         style: const TextStyle(
                                             color: Colors.black, fontSize: 16),
                                       ),
@@ -732,7 +729,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           score: scores,
                           fairwaysHit: fairwaysHit,
                           greensHit: greensHit,
-                          par: par,
+                          par: pars,
+                          tee: selectedTee,
                           focusNodes: focusNodes,
                           controllers: controllers,
                           nameController: nameController,
@@ -756,8 +754,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         Padding(
                           padding: EdgeInsets.only(left: 0 * scaleFactor),
                           child: PutterRow(
-                            putts: puttsScores,
-                            par: par,
+                            // putts: puttsScores.toList(),
+                            putts: List.generate(18, (index) => 0),
+                            par: pars.values.toList()[0],
                             focusNodes: puttsFocusNodes,
                             controllers: puttsControllers,
                             scrollController: scrollController,
@@ -793,7 +792,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   child: Column(
                                     children: [
-                                      if (par[index] == 4 || par[index] == 5)
+                                      if (pars[selectedTee]?[index] == 4 ||
+                                          pars[selectedTee]?[index] == 5)
                                         SizedBox(
                                           height: 35 * scaleFactor,
                                           child: TextButton(
@@ -810,7 +810,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                             ),
                                           ),
                                         ),
-                                      if (par[index] == 4 || par[index] == 5)
+                                      if (pars[selectedTee]?[index] == 4 ||
+                                          pars[selectedTee]?[index] == 5)
                                         SizedBox(
                                           height: 35 * scaleFactor,
                                           child: TextButton(
@@ -827,7 +828,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             ),
                                           ),
                                         ),
-                                      if (par[index] == 3)
+                                      if (pars[selectedTee]?[index] == 3)
                                         SizedBox(
                                           height: 70 * scaleFactor,
                                           child: TextButton(
@@ -887,7 +888,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'Fairways Hit: ${_countFairwaysHit()}/${par.where((p) => p == 4 || p == 5).length}',
+                        'Fairways Hit: ${_countFairwaysHit()}/${pars[selectedTee]?.where((p) => p == 4 || p == 5).length}',
                         style: const TextStyle(fontSize: 11),
                       ),
                       Text(

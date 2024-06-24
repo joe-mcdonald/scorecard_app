@@ -11,7 +11,8 @@ class PlayerRow extends StatefulWidget {
   final List<int> score;
   final List<int> fairwaysHit;
   final List<int> greensHit;
-  final List<int> par;
+  final Map<String, List<int>> par;
+  final String tee;
   final List<FocusNode> focusNodes;
   final List<TextEditingController> controllers;
   final TextEditingController nameController;
@@ -28,6 +29,7 @@ class PlayerRow extends StatefulWidget {
     required this.fairwaysHit,
     required this.greensHit,
     required this.par,
+    required this.tee,
     required this.focusNodes,
     required this.controllers,
     required this.nameController,
@@ -116,7 +118,7 @@ class _PlayerRowState extends State<PlayerRow> {
                   }
                 },
                 decoration: InputDecoration(
-                  hintText: '${widget.par[index]}',
+                  hintText: '${widget.par[widget.tee]?[index]}',
                   hintStyle: TextStyle(color: Colors.grey, fontSize: 33),
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.zero,
@@ -129,7 +131,7 @@ class _PlayerRowState extends State<PlayerRow> {
         Positioned.fill(
           child: IgnorePointer(
             child: CustomPaint(
-              painter: _ShapePainter(widget.par[index],
+              painter: _ShapePainter(widget.par[widget.tee]![index],
                   int.tryParse(widget.controllers[index].text)),
             ),
           ),
@@ -274,28 +276,34 @@ class _PlayerRowState extends State<PlayerRow> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
+              AutoSizeText(
                 'F: ${widget.score.sublist(0, 9).reduce((a, b) => a + b)}',
-                style: TextStyle(
+                style: const TextStyle(
                   color: Colors.black,
                   fontSize: 18,
+                  overflow: TextOverflow.ellipsis,
                 ),
+                minFontSize: 12,
                 textAlign: TextAlign.left,
               ),
-              Text(
+              AutoSizeText(
                 'B: ${widget.score.sublist(9, 18).reduce((a, b) => a + b)}',
-                style: TextStyle(
+                style: const TextStyle(
                   color: Colors.black,
                   fontSize: 18,
+                  overflow: TextOverflow.ellipsis,
                 ),
+                minFontSize: 12,
                 textAlign: TextAlign.left,
               ),
-              Text(
+              AutoSizeText(
                 'T: ${widget.score.sublist(0, 9).reduce((a, b) => a + b) + widget.score.sublist(9, 18).reduce((a, b) => a + b)}',
-                style: TextStyle(
+                style: const TextStyle(
                     color: Colors.black,
                     fontSize: 18,
                     fontWeight: FontWeight.bold),
+                overflow: TextOverflow.ellipsis,
+                minFontSize: 12,
                 textAlign: TextAlign.left,
               ),
             ],

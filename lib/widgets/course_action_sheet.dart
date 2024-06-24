@@ -6,17 +6,19 @@ import 'package:url_launcher/url_launcher.dart';
 class CourseActionSheet extends StatefulWidget {
   final Function(String course, String tee) onCourseSelected;
   final Function(
-      List<int> par,
-      List<int> mensHcap,
-      List<int> womensHcap,
-      List<String> tees,
-      Map<String, List<int>> yardages,
-      String selectedTee) onCourseDataLoaded;
-  final List<int> par;
+    Map<String, List<int>> pars,
+    List<int> mensHcap,
+    List<int> womensHcap,
+    List<String> tees,
+    Map<String, List<int>> yardages,
+    String selectedTee,
+  ) onCourseDataLoaded;
+  final Map<String, List<int>> yardages;
+  final Map<String, List<int>> pars;
+
   final List<int> mensHcap;
   final List<int> womensHcap;
   final List<String> tees;
-  final Map<String, List<int>> yardages;
   final String selectedTee;
   final bool isLoading;
 
@@ -24,7 +26,7 @@ class CourseActionSheet extends StatefulWidget {
     super.key,
     required this.onCourseSelected,
     required this.onCourseDataLoaded,
-    required this.par,
+    required this.pars,
     required this.mensHcap,
     required this.womensHcap,
     required this.tees,
@@ -39,25 +41,27 @@ class CourseActionSheet extends StatefulWidget {
 
 class _CourseActionSheetState extends State<CourseActionSheet> {
   Future<void> _loadCourseData(String course, String courseName) async {
-    final rawData = await rootBundle.loadString('assets/$course.csv');
-    List<List<dynamic>> csvData = const CsvToListConverter().convert(rawData);
+    final data = await rootBundle.loadString('assets/$course - Sheet1.csv');
+    List<List<dynamic>> csvTable = const CsvToListConverter().convert(data);
 
-    List<int> par = csvData[2].sublist(1).map((e) => e as int).toList();
-    List<int> mensHcap = csvData[3].sublist(1).map((e) => e as int).toList();
-    List<int> womensHcap = csvData[4].sublist(1).map((e) => e as int).toList();
+    List<int> mensHcap = csvTable[3].sublist(1).map((e) => e as int).toList();
+    List<int> womensHcap = csvTable[4].sublist(1).map((e) => e as int).toList();
     List<String> tees =
-        csvData.map((row) => row[0].toString()).skip(5).toList();
+        csvTable.map((row) => row[0].toString()).skip(5).toList();
     Map<String, List<int>> yardages = {};
-    for (var row in csvData.skip(5)) {
+    Map<String, List<int>> pars = {};
+    for (var row in csvTable.skip(5)) {
       String teeName = row[0];
       List<int> yardage = row.sublist(1).map((e) => e as int).toList();
+      List<int> par = row.sublist(19).map((e) => e as int).toList();
       yardages[teeName] = yardage;
+      pars[teeName] = par;
     }
     String selectedTee = tees[0];
 
     setState(() {
       widget.onCourseDataLoaded(
-          par, mensHcap, womensHcap, tees, yardages, selectedTee);
+          pars, mensHcap, womensHcap, tees, yardages, selectedTee);
       widget.onCourseSelected(courseName, selectedTee);
     });
   }
@@ -97,10 +101,10 @@ class _CourseActionSheetState extends State<CourseActionSheet> {
       },
       child: Column(
         children: [
-          Text(courseName),
-          Text(courseLocation,
+          Text(courseName,
               style: const TextStyle(
-                  fontSize: 12, color: CupertinoColors.systemGrey)),
+                  fontSize: 20, color: CupertinoColors.systemBlue)),
+          Text(courseLocation, style: const TextStyle(fontSize: 12)),
         ],
       ),
     );
@@ -112,16 +116,23 @@ class _CourseActionSheetState extends State<CourseActionSheet> {
       height: 435,
       child: CupertinoActionSheet(
         title: const Text('Courses',
-            style: TextStyle(fontSize: 16, color: CupertinoColors.systemGrey)),
-        message: const Text('Select a course.'),
+            style: TextStyle(fontSize: 25, color: CupertinoColors.systemGrey)),
+        message: const Text('Select a course.',
+            style: TextStyle(fontSize: 20, color: CupertinoColors.systemGrey)),
         actions: [
           _buildAction('beachgrove', 'Beach Grove Golf Club', 'Tsawwassen, BC'),
           _buildAction('bigskygc', 'Big Sky Golf Club', 'Pemberton, BC'),
+          _buildAction('calclub', 'Cal Club', 'San Francisco, CA'),
           _buildAction('cordovabay', 'Cordova Bay Golf Course', 'Victoria, BC'),
+          _buildAction(
+              'fairmontwhistler', 'Chateau Fairmont Whistler', 'Whistler, BC'),
           _buildAction('highlandpacific', 'Highland Pacific Golf Course',
               'Victoria, BC'),
           _buildAction(
               'marinedrive', 'Marine Drive Golf Club', 'Vancouver, BC'),
+          _buildAction('mcleery', 'McLeery Golf Course', 'Vancouver, BC'),
+          _buildAction('morgancreek', 'Morgan Creek Golf Course', 'Surrey, BC'),
+          _buildAction('musqueam', 'Musqueam Golf Course', 'Vancouver, BC'),
           _buildAction(
               'nicklausnorth', 'Nicklaus North Golf Club', 'Whistler, BC'),
           _buildAction(
