@@ -116,7 +116,7 @@ class MatchPlayResultsRow extends StatelessWidget {
               bottomRight: Radius.circular(12),
             ),
           ),
-          child: Column(),
+          child: const Column(),
         ),
       ],
     );

@@ -48,7 +48,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _showPopup() {
-    final overlay = Overlay.of(context)?.context.findRenderObject();
+    final overlay = Overlay.of(context).context.findRenderObject();
     final overlayBox = overlay as RenderBox;
     final offset = overlayBox.localToGlobal(Offset.zero);
     final entry = OverlayEntry(
@@ -69,7 +69,7 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
     );
 
-    Overlay.of(context)?.insert(entry);
+    Overlay.of(context).insert(entry);
 
     Future.delayed(const Duration(seconds: 1), () {
       entry.remove();

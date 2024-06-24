@@ -112,7 +112,7 @@ class _CourseActionSheetState extends State<CourseActionSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       height: 435,
       child: CupertinoActionSheet(
         title: const Text('Courses',

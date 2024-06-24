@@ -119,7 +119,7 @@ class _PlayerRowState extends State<PlayerRow> {
                 },
                 decoration: InputDecoration(
                   hintText: '${widget.par[widget.tee]?[index]}',
-                  hintStyle: TextStyle(color: Colors.grey, fontSize: 33),
+                  hintStyle: const TextStyle(color: Colors.grey, fontSize: 33),
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -229,7 +229,7 @@ class _PlayerRowState extends State<PlayerRow> {
                 (widget.nameController.text).isEmpty
                     ? 'Name'
                     : widget.nameController.text,
-                style: TextStyle(
+                style: const TextStyle(
                   color: Colors.black,
                   fontSize: 30,
                 ),
