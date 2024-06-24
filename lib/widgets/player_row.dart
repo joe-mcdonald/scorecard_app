@@ -21,6 +21,7 @@ class PlayerRow extends StatefulWidget {
   final Function(int) removePlayer;
   final VoidCallback onScoreChanged;
   final bool matchPlayEnabled;
+  final List<int> coursePars;
 
   const PlayerRow({
     super.key,
@@ -38,6 +39,7 @@ class PlayerRow extends StatefulWidget {
     required this.removePlayer,
     required this.onScoreChanged,
     required this.matchPlayEnabled,
+    required this.coursePars,
   });
 
   @override
@@ -297,7 +299,7 @@ class _PlayerRowState extends State<PlayerRow> {
                 textAlign: TextAlign.left,
               ),
               AutoSizeText(
-                'T: ${widget.score.sublist(0, 9).reduce((a, b) => a + b) + widget.score.sublist(9, 18).reduce((a, b) => a + b)}',
+                'T: ${widget.score.sublist(0, 18).reduce((a, b) => a + b) - widget.coursePars.reduce((a, b) => a + b) >= 0 ? "+" : ""}${widget.score.sublist(0, 18).reduce((a, b) => a + b) - widget.coursePars.reduce((a, b) => a + b)}/${widget.score.sublist(0, 18).reduce((a, b) => a + b)}',
                 style: const TextStyle(
                     color: Colors.black,
                     fontSize: 18,

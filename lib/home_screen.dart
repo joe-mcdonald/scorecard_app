@@ -739,6 +739,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           removePlayer: _removePlayer,
                           onScoreChanged: _calculateMatchPlay, // Add this line
                           matchPlayEnabled: matchPlayMode,
+                          coursePars: pars[selectedTee]!.toList(),
                         );
                       }),
                       if (matchPlayMode && playersScores.length == 2)
