@@ -1,16 +1,30 @@
-# scorecard_app
+# Scorecard App
 
-A new Flutter project.
+A golf scorecard app for courses in Vancouver, Victoria and Whistler.
 
-## Getting Started
+Vancouver area courses:
+- Beach Grove Golf Club (Tsawwassen)
+- Marine Drive G&CC
+- McLeery Golf Course
+- Morgan Creek Golf Course (Surrey)
+- Musqueam Golf Course
+- Point Grey G&CC
+- Shaughnessy G&CC
+- University Golf Club
 
-This project is a starting point for a Flutter application.
+Victoria/Nanaimo area courses:
+- Cordova Bay (Victoria)
+- Fairwinds Golf Course (Nanaimo)
+- Highland Pacific (Victoria)
+- Pheasant Glen Golf Resort (Nanaimo)
+- Royal Colwood G&CC
+- Victoria Golf Club
 
-A few resources to get you started if this is your first Flutter project:
+Whistler courses:
+- Big Sky GC (Pemberton)
+- Fairmont Chateau Whistler
+- Nicklaus North GC
+- Whistler Golf Club
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Other:
+- Cal Club (San Francisco)
