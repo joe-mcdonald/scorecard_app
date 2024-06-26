@@ -25,6 +25,7 @@ class MyApp extends StatelessWidget {
     final scaleFactorProvider = Provider.of<ScaleFactorProvider>(context);
 
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
