@@ -4,13 +4,6 @@
 <dict>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
-	<string>whatsapp</string>
-	<string>fb</string>
-	<string>mailto</string>
-	<string>twitter</string>
-	</array>
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
 		<string>sms</string>
 	</array>
 	<key>NSPhotoLibraryUsageDescription</key>
@@ -34,11 +27,11 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>$(FLUTTER_BUILD_NAME)</string>
+	<string>1.0.2</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
-	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<string>1.0.2</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
