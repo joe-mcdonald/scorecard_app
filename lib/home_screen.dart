@@ -1,7 +1,10 @@
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:scorecard_app/database_helper.dart';
+import 'package:scorecard_app/models/player.dart';
 import 'package:scorecard_app/scale_factor_provider.dart';
 import 'package:scorecard_app/widgets/course_action_sheet.dart';
 import 'package:scorecard_app/widgets/match_play_results_row.dart';
@@ -57,6 +60,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String selectedCourse = 'Shaughnessy G&CC';
 
+  List<Player> players = [];
+
   // List<int> par = [];
   List<String> tees = [];
   List<int> mensHcap = [];
@@ -78,6 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _loadSettings();
     _loadSavedState();
+    _loadPlayers();
     _loadCourseData('shaughnessy').then((_) {
       setState(() {});
     });
@@ -114,6 +120,13 @@ class _HomeScreenState extends State<HomeScreen> {
       controller.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _loadPlayers() async {
+    List<Player> players = await DatabaseHelper().getPlayers();
+    setState(() {
+      this.players = players;
+    });
   }
 
   Future<void> _loadCourseData(String course) async {
@@ -273,6 +286,8 @@ class _HomeScreenState extends State<HomeScreen> {
       hcapControllers.removeRange(1, hcapControllers.length);
       hasSeenMatchPlayWinDialog = false;
 
+      DatabaseHelper().addPlayer('Joe', 4, List.generate(18, (index) => 0));
+
       _saveScores();
       _saveState();
     });
@@ -295,14 +310,42 @@ class _HomeScreenState extends State<HomeScreen> {
     return greensHit.where((hit) => hit == 1).length;
   }
 
-  void _addPlayer() {
+  // void _addPlayer() {
+  //   setState(() {
+  //     playersControllers
+  //         .add(List.generate(18, (index) => TextEditingController()));
+  //     playersScores.add(List.generate(18, (index) => 0));
+  //     playersFocusNodes.add(List.generate(18, (index) => FocusNode()));
+  //     nameControllers.add(TextEditingController());
+  //     hcapControllers.add(TextEditingController());
+  //   });
+  // }
+
+  final DatabaseHelper _dbHelper = DatabaseHelper();
+  List<Player> _players = [];
+
+  Future<void> _fetchPlayers() async {
+    final players = await _dbHelper.getPlayers();
     setState(() {
-      playersControllers
-          .add(List.generate(18, (index) => TextEditingController()));
-      playersScores.add(List.generate(18, (index) => 0));
-      playersFocusNodes.add(List.generate(18, (index) => FocusNode()));
-      nameControllers.add(TextEditingController());
-      hcapControllers.add(TextEditingController());
+      _players = players
+          .map((map) => Player.fromMap(map as Map<String, dynamic>))
+          .toList();
+    });
+  }
+
+  Future<void> _addPlayer() async {
+    final newPlayer = Player(
+        id: 0,
+        name: 'New Player',
+        handicap: 0,
+        score: List.generate(18, (index) => 0));
+    final id = await _dbHelper.addPlayer(
+      newPlayer.name,
+      newPlayer.handicap,
+      newPlayer.score,
+    );
+    setState(() {
+      _players.add(newPlayer..id = id);
     });
   }
 
@@ -714,34 +757,62 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 5),
                       // Player rows
-                      ...playersControllers.asMap().entries.map((entry) {
-                        int playerIndex = entry.key;
-                        List<TextEditingController> controllers = entry.value;
-                        List<FocusNode> focusNodes =
-                            playersFocusNodes[playerIndex];
-                        List<int> scores = playersScores[playerIndex];
-                        TextEditingController nameController =
-                            nameControllers[playerIndex];
-                        TextEditingController hcapController = hcapControllers[
-                            playerIndex]; // Add handicap controller
+                      // ...playersControllers.asMap().entries.map((entry) {
+                      //   int playerIndex = entry.key;
+                      //   List<TextEditingController> controllers = entry.value;
+                      //   List<FocusNode> focusNodes =
+                      //       playersFocusNodes[playerIndex];
+                      //   List<int> scores = playersScores[playerIndex];
+                      //   TextEditingController nameController =
+                      //       nameControllers[playerIndex];
+                      //   TextEditingController hcapController = hcapControllers[
+                      //       playerIndex]; // Add handicap controller
+                      //   return PlayerRow(
+                      //     index: playerIndex,
+                      //     score: scores,
+                      //     fairwaysHit: fairwaysHit,
+                      //     greensHit: greensHit,
+                      //     par: pars,
+                      //     tee: selectedTee,
+                      //     focusNodes: focusNodes,
+                      //     controllers: controllers,
+                      //     nameController: nameController,
+                      //     hcapController: hcapController,
+                      //     scrollController: scrollController,
+                      //     removePlayer: _removePlayer,
+                      //     onScoreChanged: _calculateMatchPlay, // Add this line
+                      //     matchPlayEnabled: matchPlayMode,
+                      //     coursePars: pars[selectedTee]!.toList(),
+                      //   );
+                      // }),
+                      ...players.map((player) {
                         return PlayerRow(
-                          index: playerIndex,
-                          score: scores,
-                          fairwaysHit: fairwaysHit,
-                          greensHit: greensHit,
-                          par: pars,
-                          tee: selectedTee,
-                          focusNodes: focusNodes,
-                          controllers: controllers,
-                          nameController: nameController,
-                          hcapController: hcapController,
+                          player: player,
+                          // index: players.indexOf(player),
+                          // score: player.scores,
+                          // fairwaysHit: player.fairwaysHit,
+                          // greensHit: player.greensHit,
+                          // par: pars,
+                          // tee: selectedTee,
+                          focusNodes: new List<FocusNode>.generate(
+                              player.score.length,
+                              (_) =>
+                                  FocusNode()), // Assuming each player has a list of scores
+                          controllers: new List<TextEditingController>.generate(
+                              player.score.length,
+                              (_) =>
+                                  TextEditingController()), // Assuming you need a controller for each score
+                          nameController:
+                              TextEditingController(text: player.name),
+                          hcapController: TextEditingController(
+                              text: player.handicap.toString()),
                           scrollController: scrollController,
                           removePlayer: _removePlayer,
-                          onScoreChanged: _calculateMatchPlay, // Add this line
+                          onScoreChanged: _calculateMatchPlay,
                           matchPlayEnabled: matchPlayMode,
                           coursePars: pars[selectedTee]!.toList(),
                         );
-                      }),
+                      }).toList(),
                       if (matchPlayMode && playersScores.length == 2)
                         MatchPlayResultsRow(
                           matchPlayResults: matchPlayResults,
