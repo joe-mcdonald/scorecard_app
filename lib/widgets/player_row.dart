@@ -3,72 +3,49 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:scorecard_app/database_helper.dart';
 import 'package:scorecard_app/models/player.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:scorecard_app/scale_factor_provider.dart';
 
-// class PlayerRow extends StatefulWidget {
-//   final int index;
-//   final List<int> score;
-//   final List<int> fairwaysHit;
-//   final List<int> greensHit;
-//   final Map<String, List<int>> par;
-//   final String tee;
-//   final List<FocusNode> focusNodes;
-//   final List<TextEditingController> controllers;
-//   final TextEditingController nameController;
-//   final TextEditingController hcapController;
-//   final ScrollController scrollController;
-//   final Function(int) removePlayer;
-//   final VoidCallback onScoreChanged;
-//   final bool matchPlayEnabled;
-//   final List<int> coursePars;
-//   const PlayerRow({
-//     super.key,
-//     required this.index,
-//     required this.score,
-//     required this.fairwaysHit,
-//     required this.greensHit,
-//     required this.par,
-//     required this.tee,
-//     required this.focusNodes,
-//     required this.controllers,
-//     required this.nameController,
-//     required this.hcapController,
-//     required this.scrollController,
-//     required this.removePlayer,
-//     required this.onScoreChanged,
-//     required this.matchPlayEnabled,
-//     required this.coursePars,
-//   });
-//   @override
-//   State<PlayerRow> createState() => _PlayerRowState();
-// }
 class PlayerRow extends StatefulWidget {
   final Player player;
-  final bool matchPlayEnabled;
-  final Function(int) removePlayer;
-  final List<int> coursePars;
+  final int index;
+  final List<int> score;
+  final List<int> fairwaysHit;
+  final List<int> greensHit;
+  final Map<String, List<int>> par;
+  final String tee;
   final List<FocusNode> focusNodes;
   final List<TextEditingController> controllers;
-  final ScrollController scrollController;
-  final VoidCallback onScoreChanged;
   final TextEditingController nameController;
   final TextEditingController hcapController;
+  final ScrollController scrollController;
+  final Function(int) removePlayer;
+  final VoidCallback onScoreChanged;
+  final bool matchPlayEnabled;
+  final List<int> coursePars;
 
   const PlayerRow({
     super.key,
     required this.player,
-    required this.matchPlayEnabled,
-    required this.removePlayer,
-    required this.coursePars,
+    required this.index,
+    required this.score,
+    required this.fairwaysHit,
+    required this.greensHit,
+    required this.par,
+    required this.tee,
     required this.focusNodes,
     required this.controllers,
-    required this.scrollController,
-    required this.onScoreChanged,
     required this.nameController,
     required this.hcapController,
+    required this.scrollController,
+    required this.removePlayer,
+    required this.onScoreChanged,
+    required this.matchPlayEnabled,
+    required this.coursePars,
   });
+
   @override
   State<PlayerRow> createState() => _PlayerRowState();
 }
@@ -76,18 +53,19 @@ class PlayerRow extends StatefulWidget {
 class _PlayerRowState extends State<PlayerRow> {
   Future<void> _saveScores() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-        'scores_${widget.player.id}', jsonEncode(widget.player.score));
+    await prefs.setString('score', jsonEncode(widget.score));
+    await prefs.setString('fairwaysHit', jsonEncode(widget.fairwaysHit));
+    await prefs.setString('greensHit', jsonEncode(widget.greensHit));
   }
 
   Widget _buildTextField(int index, double scaleFactor) {
     Color textColor = Colors.black; // Default color
     if (widget.matchPlayEnabled) {
-      // if (widget.index == 0) {
-      //   textColor = Colors.red; // Player 1's color
-      // } else if (widget.index == 1) {
-      //   textColor = const Color.fromARGB(198, 0, 0, 255); // Player 2's color
-      // }
+      if (widget.index == 0) {
+        textColor = Colors.red; // Player 1's color
+      } else if (widget.index == 1) {
+        textColor = const Color.fromARGB(198, 0, 0, 255); // Player 2's color
+      }
     }
     return Stack(
       alignment: Alignment.center,
@@ -131,14 +109,14 @@ class _PlayerRowState extends State<PlayerRow> {
                   int? value = int.tryParse(text);
                   if (value != null) {
                     setState(() {
-                      widget.player.score[index] = value;
+                      widget.score[index] = value;
                       _saveScores();
                       widget
                           .onScoreChanged(); // Call the callback when score changes
                     });
                   } else {
                     setState(() {
-                      widget.player.score[index] = 0;
+                      widget.score[index] = 0;
                       _saveScores();
                       widget
                           .onScoreChanged(); // Call the callback when score changes
@@ -146,7 +124,7 @@ class _PlayerRowState extends State<PlayerRow> {
                   }
                 },
                 decoration: InputDecoration(
-                  // hintText: '${widget.par[widget.tee]?[index]}',
+                  hintText: '${widget.par[widget.tee]?[index]}',
                   hintStyle: const TextStyle(color: Colors.grey, fontSize: 33),
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.zero,
@@ -156,16 +134,20 @@ class _PlayerRowState extends State<PlayerRow> {
             ),
           ),
         ),
-        // Positioned.fill(
-        //   child: IgnorePointer(
-        //     child: CustomPaint(
-        //       painter: _ShapePainter(widget.par[widget.tee]![index],
-        //           int.tryParse(widget.controllers[index].text)),
-        //     ),
-        //   ),
-        // ),
+        Positioned.fill(
+          child: IgnorePointer(
+            child: CustomPaint(
+              painter: _ShapePainter(widget.par[widget.tee]![index],
+                  int.tryParse(widget.controllers[index].text)),
+            ),
+          ),
+        ),
       ],
     );
+  }
+
+  Future<void> _savePlayer() async {
+    await DatabaseHelper().updatePlayer(widget.player);
   }
 
   @override
@@ -221,7 +203,7 @@ class _PlayerRowState extends State<PlayerRow> {
                     ),
                     onPressed: () {
                       Navigator.of(context).pop();
-                      widget.removePlayer(widget.player.id);
+                      widget.removePlayer(widget.index);
                       // Remove the player row
                     },
                   ),
@@ -231,7 +213,11 @@ class _PlayerRowState extends State<PlayerRow> {
                       style: TextStyle(color: CupertinoColors.activeBlue),
                     ),
                     onPressed: () {
+                      // widget.player.name = widget.nameController.text;
+                      // Update the database
+                      _savePlayer();
                       Navigator.of(context).pop();
+
                       // Save the name, display it on the row
                     },
                   ),
@@ -305,7 +291,7 @@ class _PlayerRowState extends State<PlayerRow> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               AutoSizeText(
-                'F: ${widget.player.score.sublist(0, 9).reduce((a, b) => a + b)}',
+                'F: ${widget.score.sublist(0, 9).reduce((a, b) => a + b)}',
                 style: const TextStyle(
                   color: Colors.black,
                   fontSize: 18,
@@ -315,7 +301,7 @@ class _PlayerRowState extends State<PlayerRow> {
                 textAlign: TextAlign.left,
               ),
               AutoSizeText(
-                'B: ${widget.player.score.sublist(9, 18).reduce((a, b) => a + b)}',
+                'B: ${widget.score.sublist(9, 18).reduce((a, b) => a + b)}',
                 style: const TextStyle(
                   color: Colors.black,
                   fontSize: 18,
@@ -325,7 +311,7 @@ class _PlayerRowState extends State<PlayerRow> {
                 textAlign: TextAlign.left,
               ),
               AutoSizeText(
-                'T: ${widget.player.score.sublist(0, 18).reduce((a, b) => a + b) - widget.coursePars.reduce((a, b) => a + b) >= 0 ? "+" : ""}${widget.player.score.sublist(0, 18).reduce((a, b) => a + b) - widget.coursePars.reduce((a, b) => a + b)}/${widget.player.score.sublist(0, 18).reduce((a, b) => a + b)}',
+                'T: ${widget.score.sublist(0, 18).reduce((a, b) => a + b) - widget.coursePars.reduce((a, b) => a + b) >= 0 ? "+" : ""}${widget.score.sublist(0, 18).reduce((a, b) => a + b) - widget.coursePars.reduce((a, b) => a + b)}/${widget.score.sublist(0, 18).reduce((a, b) => a + b)}',
                 style: const TextStyle(
                     color: Colors.black,
                     fontSize: 18,

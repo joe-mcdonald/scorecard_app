@@ -1,13 +1,13 @@
 import 'dart:convert';
 
 class Player {
-  late final int id;
+  late int? id;
   final String name;
   final double handicap;
   final List<int> score; // Assuming score is a list of integers
 
   Player(
-      {required this.id,
+      {this.id,
       required this.name,
       required this.handicap,
       required this.score});
@@ -17,7 +17,7 @@ class Player {
       'id': id,
       'name': name,
       'handicap': handicap,
-      'scores': jsonEncode(score),
+      'score': jsonEncode(score),
     };
   }
 
@@ -26,7 +26,7 @@ class Player {
       id: map['id'],
       name: map['name'],
       handicap: map['handicap'],
-      score: List<int>.from(jsonDecode(map['scores'])),
+      score: List<int>.from(jsonDecode(map['score'])),
     );
   }
 }

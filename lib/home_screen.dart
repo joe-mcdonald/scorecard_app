@@ -1,5 +1,4 @@
 import 'package:auto_size_text/auto_size_text.dart';
-import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -17,6 +16,7 @@ import 'dart:async';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:csv/csv.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:sqflite/sqflite.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,43 +26,50 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<List<TextEditingController>> playersControllers = [
-    List.generate(18, (index) => TextEditingController()),
-  ];
-  List<List<int>> playersScores = [
-    List.generate(18, (index) => 0),
-  ];
-  List<List<FocusNode>> playersFocusNodes = [
-    List.generate(18, (index) => FocusNode()),
-  ];
-  List<TextEditingController> nameControllers = [
-    TextEditingController(),
-  ];
-  List<TextEditingController> hcapControllers = [
-    TextEditingController(),
-  ];
+  // List<List<TextEditingController>> playersControllers = [
+  //   List.generate(18, (index) => TextEditingController()),
+  // ];
+  late List<List<TextEditingController>> playersControllers;
+  // List<List<int>> playersScores = [
+  //   List.generate(18, (index) => 0),
+  // ];
+  late List<List<int>> playersScores;
+  // List<List<FocusNode>> playersFocusNodes = [
+  //   List.generate(18, (index) => FocusNode()),
+  // ];
+  late List<List<FocusNode>> playersFocusNodes;
+  // List<TextEditingController> nameControllers = [
+  //   TextEditingController(),
+  // ];
+  late List<TextEditingController> nameControllers;
+  // List<TextEditingController> hcapControllers = [
+  //   TextEditingController(),
+  // ];
+  late List<TextEditingController> hcapControllers;
 
   bool isLoading = true;
   bool showFairwayGreen = false;
   bool mensHandicap = true;
   List<int> fairwaysHit = List.generate(18, (index) => 0);
+  // late List<int> fairwaysHit;
   List<int> greensHit = List.generate(18, (index) => 0);
+  // late List<int> greensHit;
   bool showPutterRow = false;
   bool matchPlayMode = false;
   List<int> puttsScores = List.generate(18, (index) => 0);
+  // late List<int> puttsScores;
   final List<TextEditingController> puttsControllers =
       List.generate(18, (index) => TextEditingController());
+  // late List<TextEditingController> puttsControllers;
   final List<FocusNode> puttsFocusNodes =
       List.generate(18, (index) => FocusNode());
+  // late List<FocusNode> puttsFocusNodes;
   // ignore: unused_field
   int _selectedIndex = 0;
   List<int> matchPlayResults = List.generate(18, (index) => 0);
 
   String selectedCourse = 'Shaughnessy G&CC';
 
-  List<Player> players = [];
-
-  // List<int> par = [];
   List<String> tees = [];
   List<int> mensHcap = [];
   List<int> womensHcap = [];
@@ -71,10 +78,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, List<int>> pars = {};
 
   List<int> score = List.generate(18, (index) => 0);
+  // late List<int> score;
 
   List<TextEditingController> controllers =
       List.generate(18, (index) => TextEditingController());
+  // late List<TextEditingController> controllers;
   List<FocusNode> focusNodes = List.generate(18, (index) => FocusNode());
+  // late List<FocusNode> focusNodes;
   ScrollController scrollController = ScrollController();
   bool hasSeenMatchPlayWinDialog = false;
 
@@ -82,8 +92,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadSettings();
-    _loadSavedState();
-    _loadPlayers();
+    // _loadSavedState();
+    _fetchPlayers();
+    // _resetValues();
     _loadCourseData('shaughnessy').then((_) {
       setState(() {});
     });
@@ -98,8 +109,21 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       });
     }
+
     // _loadScores();
     // _loadPutts();
+  }
+
+  DatabaseHelper _dbHelper = DatabaseHelper();
+  List<Player> _players = [];
+
+  Future<void> _fetchPlayers() async {
+    final players = await _dbHelper.getPlayers();
+    setState(() {
+      _players = players
+          .map((map) => Player.fromMap(map as Map<String, dynamic>))
+          .toList();
+    });
   }
 
   @override
@@ -120,13 +144,6 @@ class _HomeScreenState extends State<HomeScreen> {
       controller.dispose();
     }
     super.dispose();
-  }
-
-  Future<void> _loadPlayers() async {
-    List<Player> players = await DatabaseHelper().getPlayers();
-    setState(() {
-      this.players = players;
-    });
   }
 
   Future<void> _loadCourseData(String course) async {
@@ -286,8 +303,6 @@ class _HomeScreenState extends State<HomeScreen> {
       hcapControllers.removeRange(1, hcapControllers.length);
       hasSeenMatchPlayWinDialog = false;
 
-      DatabaseHelper().addPlayer('Joe', 4, List.generate(18, (index) => 0));
-
       _saveScores();
       _saveState();
     });
@@ -321,31 +336,22 @@ class _HomeScreenState extends State<HomeScreen> {
   //   });
   // }
 
-  final DatabaseHelper _dbHelper = DatabaseHelper();
-  List<Player> _players = [];
-
-  Future<void> _fetchPlayers() async {
-    final players = await _dbHelper.getPlayers();
-    setState(() {
-      _players = players
-          .map((map) => Player.fromMap(map as Map<String, dynamic>))
-          .toList();
-    });
-  }
-
-  Future<void> _addPlayer() async {
+  Future<void> _addPlayer(String name, double handicap) async {
     final newPlayer = Player(
-        id: 0,
-        name: 'New Player',
-        handicap: 0,
-        score: List.generate(18, (index) => 0));
-    final id = await _dbHelper.addPlayer(
-      newPlayer.name,
-      newPlayer.handicap,
-      newPlayer.score,
+      name: name,
+      handicap: handicap,
+      score: List.generate(18, (index) => 0),
     );
+    final id = await _dbHelper.addPlayer(newPlayer.toMap());
+    playersControllers
+        .add(List.generate(18, (index) => TextEditingController()));
+    playersScores.add(List.generate(18, (index) => 0));
+    playersFocusNodes.add(List.generate(18, (index) => FocusNode()));
+    nameControllers.add(TextEditingController());
+    hcapControllers.add(TextEditingController());
+    newPlayer.id = id;
     setState(() {
-      _players.add(newPlayer..id = id);
+      _players.add(newPlayer);
     });
   }
 
@@ -556,6 +562,16 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _updatePlayer(Player player) async {
+    await _dbHelper.updatePlayer(player);
+    setState(() {
+      int index = _players.indexWhere((p) => p.id == player.id);
+      if (index != -1) {
+        _players[index] = player;
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final scaleFactor = Provider.of<ScaleFactorProvider>(context).scaleFactor;
@@ -757,62 +773,40 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 5),
                       // Player rows
-                      // ...playersControllers.asMap().entries.map((entry) {
-                      //   int playerIndex = entry.key;
-                      //   List<TextEditingController> controllers = entry.value;
-                      //   List<FocusNode> focusNodes =
-                      //       playersFocusNodes[playerIndex];
-                      //   List<int> scores = playersScores[playerIndex];
-                      //   TextEditingController nameController =
-                      //       nameControllers[playerIndex];
-                      //   TextEditingController hcapController = hcapControllers[
-                      //       playerIndex]; // Add handicap controller
-                      //   return PlayerRow(
-                      //     index: playerIndex,
-                      //     score: scores,
-                      //     fairwaysHit: fairwaysHit,
-                      //     greensHit: greensHit,
-                      //     par: pars,
-                      //     tee: selectedTee,
-                      //     focusNodes: focusNodes,
-                      //     controllers: controllers,
-                      //     nameController: nameController,
-                      //     hcapController: hcapController,
-                      //     scrollController: scrollController,
-                      //     removePlayer: _removePlayer,
-                      //     onScoreChanged: _calculateMatchPlay, // Add this line
-                      //     matchPlayEnabled: matchPlayMode,
-                      //     coursePars: pars[selectedTee]!.toList(),
-                      //   );
-                      // }),
-                      ...players.map((player) {
-                        return PlayerRow(
-                          player: player,
-                          // index: players.indexOf(player),
-                          // score: player.scores,
-                          // fairwaysHit: player.fairwaysHit,
-                          // greensHit: player.greensHit,
-                          // par: pars,
-                          // tee: selectedTee,
-                          focusNodes: new List<FocusNode>.generate(
-                              player.score.length,
-                              (_) =>
-                                  FocusNode()), // Assuming each player has a list of scores
-                          controllers: new List<TextEditingController>.generate(
-                              player.score.length,
-                              (_) =>
-                                  TextEditingController()), // Assuming you need a controller for each score
-                          nameController:
-                              TextEditingController(text: player.name),
-                          hcapController: TextEditingController(
-                              text: player.handicap.toString()),
-                          scrollController: scrollController,
-                          removePlayer: _removePlayer,
-                          onScoreChanged: _calculateMatchPlay,
-                          matchPlayEnabled: matchPlayMode,
-                          coursePars: pars[selectedTee]!.toList(),
-                        );
-                      }).toList(),
+                      if (_players.isNotEmpty)
+                        ...playersControllers.asMap().entries.map((entry) {
+                          int playerIndex = entry.key;
+                          List<TextEditingController> controllers = entry.value;
+                          List<FocusNode> focusNodes =
+                              playersFocusNodes[playerIndex];
+                          List<int> scores = playersScores[playerIndex];
+                          TextEditingController nameController =
+                              nameControllers[playerIndex];
+                          TextEditingController hcapController =
+                              hcapControllers[playerIndex];
+                          if (_players.isEmpty) {
+                            _addPlayer('Player ${playersScores.length + 1}', 0);
+                          }
+                          return PlayerRow(
+                            player: _players[playerIndex],
+                            index: playerIndex,
+                            score: scores,
+                            fairwaysHit: fairwaysHit,
+                            greensHit: greensHit,
+                            par: pars,
+                            tee: selectedTee,
+                            focusNodes: focusNodes,
+                            controllers: controllers,
+                            nameController: nameController,
+                            hcapController: hcapController,
+                            scrollController: scrollController,
+                            removePlayer: _removePlayer,
+                            onScoreChanged:
+                                _calculateMatchPlay, // Add this line
+                            matchPlayEnabled: matchPlayMode,
+                            coursePars: pars[selectedTee]!.toList(),
+                          );
+                        }),
                       if (matchPlayMode && playersScores.length == 2)
                         MatchPlayResultsRow(
                           matchPlayResults: matchPlayResults,
@@ -821,7 +815,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             nameControllers[1].text
                           ],
                         ),
-
                       if (showPutterRow)
                         Padding(
                           padding: EdgeInsets.only(left: 0 * scaleFactor),
@@ -939,37 +932,32 @@ class _HomeScreenState extends State<HomeScreen> {
           height: 80,
           child: Row(
             children: <Widget>[
-              GestureDetector(
-                onTap: () {
-                  _addPlayer();
+              IconButton(
+                onPressed: () {
+                  _addPlayer('Player ${playersScores.length}', 0);
                 },
-                child: const Row(
+                icon: Icon(Icons.add),
+              ),
+
+              // if (showFairwayGreen)
+              Padding(
+                padding: const EdgeInsets.only(
+                    left: 12.0), // Padding to push it closer to the left edg
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    SizedBox(width: 8),
-                    Icon(Icons.add),
+                    Text(
+                      'Fairways Hit: ${_countFairwaysHit()}/${pars[selectedTee]?.where((p) => p == 4 || p == 5).length}',
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                    Text(
+                      'Greens Hit: ${_countGreensHit()}/18',
+                      style: const TextStyle(fontSize: 11),
+                    ),
                   ],
                 ),
               ),
-
-              if (showFairwayGreen)
-                Padding(
-                  padding: const EdgeInsets.only(
-                      left: 12.0), // Padding to push it closer to the left edg
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Fairways Hit: ${_countFairwaysHit()}/${pars[selectedTee]?.where((p) => p == 4 || p == 5).length}',
-                        style: const TextStyle(fontSize: 11),
-                      ),
-                      Text(
-                        'Greens Hit: ${_countGreensHit()}/18',
-                        style: const TextStyle(fontSize: 11),
-                      ),
-                    ],
-                  ),
-                ),
               const Spacer(), // Pushes the settings button to the right
               IconButton(
                 onPressed: () {

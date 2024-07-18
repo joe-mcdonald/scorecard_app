@@ -18,6 +18,10 @@ class DatabaseHelper {
 
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), 'golf_app.db');
+
+    // Delete the existing database (for development purposes)
+    await deleteDatabase(path);
+
     return await openDatabase(
       path,
       version: 1,
@@ -34,30 +38,46 @@ class DatabaseHelper {
         score TEXT
       )
     ''');
-    addPlayer('Player 1', 10.0, []);
+    Player player = Player(
+      name: 'Player 1',
+      handicap: 10.0,
+      score: [],
+    );
+    addPlayer(player.toMap());
   }
 
-  Future<int> addPlayer(String name, double handicap, List<int> scores) async {
+  Future<int> addPlayer(Map<String, dynamic> player) async {
     final db = await database;
-    return await db.insert('players', {
-      'name': name,
-      'handicap': handicap,
-      'scores': jsonEncode(scores),
-    });
+    return await db.insert('players', player);
+    // return await db.insert('players', {
+    //   'name': name,
+    //   'handicap': handicap,
+    //   'score': jsonEncode(scores),
+    // });
   }
 
-  Future<int> updatePlayer(
-      int id, String name, double handicap, List<int> scores) async {
+  // Future<int> updatePlayer(
+  //     int id, String name, double handicap, List<int> scores) async {
+  //   final db = await database;
+  //   return await db.update(
+  //       'players',
+  //       {
+  //         'name': name,
+  //         'handicap': handicap,
+  //         'score': jsonEncode(scores),
+  //       },
+  //       where: 'id = ?',
+  //       whereArgs: [id]);
+  // }
+
+  Future<void> updatePlayer(Player player) async {
     final db = await database;
-    return await db.update(
-        'players',
-        {
-          'name': name,
-          'handicap': handicap,
-          'scores': jsonEncode(scores),
-        },
-        where: 'id = ?',
-        whereArgs: [id]);
+    await db.update(
+      'players',
+      player.toMap(),
+      where: 'id = ?',
+      whereArgs: [player.id],
+    );
   }
 
   Future<int> deletePlayer(int id) async {
@@ -76,4 +96,9 @@ class DatabaseHelper {
       return Player.fromMap(maps[i]);
     });
   }
+
+  // Future<List<Map<String, dynamic>>> getPlayers() async {
+  //   final db = await database;
+  //   return await db.query('players');
+  // }
 }
