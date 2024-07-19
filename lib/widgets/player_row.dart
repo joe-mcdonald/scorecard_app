@@ -1,49 +1,32 @@
 import 'dart:convert';
-import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:scorecard_app/database_helper.dart';
-import 'package:scorecard_app/models/player.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:scorecard_app/scale_factor_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:scorecard_app/database_helper.dart';
 
 class PlayerRow extends StatefulWidget {
-  final Player player;
-  final int index;
   final List<int> score;
+  final String tee;
   final List<int> fairwaysHit;
   final List<int> greensHit;
-  final Map<String, List<int>> par;
-  final String tee;
+  final List<int> par;
   final List<FocusNode> focusNodes;
   final List<TextEditingController> controllers;
-  final TextEditingController nameController;
-  final TextEditingController hcapController;
+  final int playerIndex;
   final ScrollController scrollController;
-  final Function(int) removePlayer;
-  final VoidCallback onScoreChanged;
-  final bool matchPlayEnabled;
-  final List<int> coursePars;
 
   const PlayerRow({
     super.key,
-    required this.player,
-    required this.index,
     required this.score,
+    required this.tee,
     required this.fairwaysHit,
     required this.greensHit,
     required this.par,
-    required this.tee,
     required this.focusNodes,
     required this.controllers,
-    required this.nameController,
-    required this.hcapController,
+    required this.playerIndex,
     required this.scrollController,
-    required this.removePlayer,
-    required this.onScoreChanged,
-    required this.matchPlayEnabled,
-    required this.coursePars,
   });
 
   @override
@@ -51,22 +34,40 @@ class PlayerRow extends StatefulWidget {
 }
 
 class _PlayerRowState extends State<PlayerRow> {
-  Future<void> _saveScores() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('score', jsonEncode(widget.score));
-    await prefs.setString('fairwaysHit', jsonEncode(widget.fairwaysHit));
-    await prefs.setString('greensHit', jsonEncode(widget.greensHit));
+  final dbHelper = DatabaseHelper();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadScores();
+  }
+
+  Future<void> _loadScores() async {
+    final scores = await dbHelper.getScores();
+    for (var score in scores) {
+      if (score['playerIndex'] == widget.playerIndex) {
+        setState(() {
+          widget.score[score['holeIndex']] = score['score'];
+          widget.controllers[score['holeIndex']].text =
+              score['score'].toString();
+        });
+      }
+    }
+  }
+
+  Future<void> _saveScore(int holeIndex, int score) async {
+    await dbHelper.insertScore(widget.playerIndex, holeIndex, score);
   }
 
   Widget _buildTextField(int index, double scaleFactor) {
     Color textColor = Colors.black; // Default color
-    if (widget.matchPlayEnabled) {
-      if (widget.index == 0) {
-        textColor = Colors.red; // Player 1's color
-      } else if (widget.index == 1) {
-        textColor = const Color.fromARGB(198, 0, 0, 255); // Player 2's color
-      }
-    }
+    // if (widget.matchPlayEnabled) {
+    //   if (widget.index == 0) {
+    //     textColor = Colors.red; // Player 1's color
+    //   } else if (widget.index == 1) {
+    //     textColor = const Color.fromARGB(198, 0, 0, 255); // Player 2's color
+    //   }
+    // }
     return Stack(
       alignment: Alignment.center,
       children: [
@@ -107,24 +108,31 @@ class _PlayerRowState extends State<PlayerRow> {
                 },
                 onChanged: (text) {
                   int? value = int.tryParse(text);
-                  if (value != null) {
-                    setState(() {
-                      widget.score[index] = value;
-                      _saveScores();
-                      widget
-                          .onScoreChanged(); // Call the callback when score changes
-                    });
-                  } else {
-                    setState(() {
-                      widget.score[index] = 0;
-                      _saveScores();
-                      widget
-                          .onScoreChanged(); // Call the callback when score changes
-                    });
-                  }
+                  setState(() {
+                    widget.score[index] = value ?? 0;
+                    _saveScore(index, widget.score[index]);
+                  });
                 },
+                // onChanged: (text) {
+                //   int? value = int.tryParse(text);
+                //   if (value != null) {
+                //     setState(() {
+                //       widget.score[index] = value;
+                //       _saveScores();
+                //       widget
+                //           .onScoreChanged(); // Call the callback when score changes
+                //     });
+                //   } else {
+                //     setState(() {
+                //       widget.score[index] = 0;
+                //       _saveScores();
+                //       widget
+                //           .onScoreChanged(); // Call the callback when score changes
+                //     });
+                //   }
+                // },
                 decoration: InputDecoration(
-                  hintText: '${widget.par[widget.tee]?[index]}',
+                  hintText: '${widget.par[index]}',
                   hintStyle: const TextStyle(color: Colors.grey, fontSize: 33),
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.zero,
@@ -137,7 +145,7 @@ class _PlayerRowState extends State<PlayerRow> {
         Positioned.fill(
           child: IgnorePointer(
             child: CustomPaint(
-              painter: _ShapePainter(widget.par[widget.tee]![index],
+              painter: _ShapePainter(widget.par[index],
                   int.tryParse(widget.controllers[index].text)),
             ),
           ),
@@ -146,111 +154,11 @@ class _PlayerRowState extends State<PlayerRow> {
     );
   }
 
-  Future<void> _savePlayer() async {
-    await DatabaseHelper().updatePlayer(widget.player);
-  }
-
   @override
   Widget build(BuildContext context) {
-    double scaleFactor = Provider.of<ScaleFactorProvider>(context).scaleFactor;
+    double scaleFactor = ScaleFactorProvider().scaleFactor;
     return Row(
       children: [
-        GestureDetector(
-          onTap: () {
-            showCupertinoDialog(
-              context: context,
-              builder: (context) => CupertinoAlertDialog(
-                content: Column(
-                  children: [
-                    CupertinoTextField(
-                      controller: widget.nameController,
-                      maxLength: 5,
-                      placeholder: 'Name',
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: Colors.transparent),
-                        borderRadius:
-                            const BorderRadius.all(Radius.circular(12)),
-                      ),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.black, fontSize: 20),
-                    ),
-                    const SizedBox(height: 20),
-                    CupertinoTextField(
-                      controller: widget.hcapController,
-                      placeholder: 'Handicap',
-                      keyboardType: const TextInputType.numberWithOptions(
-                        signed: false,
-                        decimal: true,
-                      ),
-                      maxLength: 5,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: Colors.transparent),
-                        borderRadius:
-                            const BorderRadius.all(Radius.circular(12)),
-                      ),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.black, fontSize: 20),
-                    ),
-                  ],
-                ),
-                actions: [
-                  CupertinoDialogAction(
-                    child: const Text(
-                      'Remove Player',
-                      style: TextStyle(color: CupertinoColors.systemRed),
-                    ),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      widget.removePlayer(widget.index);
-                      // Remove the player row
-                    },
-                  ),
-                  CupertinoDialogAction(
-                    child: const Text(
-                      'OK',
-                      style: TextStyle(color: CupertinoColors.activeBlue),
-                    ),
-                    onPressed: () {
-                      // widget.player.name = widget.nameController.text;
-                      // Update the database
-                      _savePlayer();
-                      Navigator.of(context).pop();
-
-                      // Save the name, display it on the row
-                    },
-                  ),
-                ],
-              ),
-            );
-          },
-          child: Container(
-            width: 80 * scaleFactor,
-            height: 40 * scaleFactor,
-            margin: EdgeInsets.all(2 * scaleFactor),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topRight: Radius.circular(12),
-                bottomRight: Radius.circular(12),
-                topLeft: Radius.circular(12),
-                bottomLeft: Radius.circular(12),
-              ),
-            ),
-            child: Center(
-              child: AutoSizeText(
-                (widget.nameController.text).isEmpty
-                    ? 'Name'
-                    : widget.nameController.text,
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 30,
-                ),
-              ),
-            ),
-          ),
-        ),
         ...List.generate(18, (index) {
           return Container(
             width: 100 * scaleFactor,
@@ -268,61 +176,11 @@ class _PlayerRowState extends State<PlayerRow> {
               child: SizedBox(
                 width: double.infinity,
                 height: double.infinity,
-                child: _buildTextField(
-                  index,
-                  scaleFactor,
-                ),
+                child: _buildTextField(index, scaleFactor),
               ),
             ),
           );
         }),
-        Container(
-          width: 100 * scaleFactor,
-          height: 81 * scaleFactor,
-          margin: EdgeInsets.all(2 * scaleFactor),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topRight: Radius.circular(12),
-              bottomRight: Radius.circular(12),
-            ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AutoSizeText(
-                'F: ${widget.score.sublist(0, 9).reduce((a, b) => a + b)}',
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 18,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                minFontSize: 12,
-                textAlign: TextAlign.left,
-              ),
-              AutoSizeText(
-                'B: ${widget.score.sublist(9, 18).reduce((a, b) => a + b)}',
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 18,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                minFontSize: 12,
-                textAlign: TextAlign.left,
-              ),
-              AutoSizeText(
-                'T: ${widget.score.sublist(0, 18).reduce((a, b) => a + b) - widget.coursePars.reduce((a, b) => a + b) >= 0 ? "+" : ""}${widget.score.sublist(0, 18).reduce((a, b) => a + b) - widget.coursePars.reduce((a, b) => a + b)}/${widget.score.sublist(0, 18).reduce((a, b) => a + b)}',
-                style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold),
-                overflow: TextOverflow.ellipsis,
-                minFontSize: 12,
-                textAlign: TextAlign.left,
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }

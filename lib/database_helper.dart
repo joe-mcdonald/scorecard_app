@@ -1,27 +1,24 @@
-import 'dart:convert';
-import 'package:scorecard_app/models/player.dart';
-import 'package:sqflite/sqflite.dart';
+import 'dart:async';
 import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   factory DatabaseHelper() => _instance;
+
   static Database? _database;
 
   DatabaseHelper._internal();
 
   Future<Database> get database async {
     if (_database != null) return _database!;
+
     _database = await _initDatabase();
     return _database!;
   }
 
   Future<Database> _initDatabase() async {
-    String path = join(await getDatabasesPath(), 'golf_app.db');
-
-    // Delete the existing database (for development purposes)
-    await deleteDatabase(path);
-
+    String path = join(await getDatabasesPath(), 'scorecard_app.db');
     return await openDatabase(
       path,
       version: 1,
@@ -29,76 +26,33 @@ class DatabaseHelper {
     );
   }
 
-  Future _onCreate(Database db, int version) async {
+  Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
-      CREATE TABLE players (
+      CREATE TABLE PlayerScores (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT,
-        handicap REAL,
-        score TEXT
+        playerIndex INTEGER,
+        holeIndex INTEGER,
+        score INTEGER
       )
     ''');
-    Player player = Player(
-      name: 'Player 1',
-      handicap: 10.0,
-      score: [],
-    );
-    addPlayer(player.toMap());
   }
 
-  Future<int> addPlayer(Map<String, dynamic> player) async {
+  Future<void> insertScore(int playerIndex, int holeIndex, int score) async {
     final db = await database;
-    return await db.insert('players', player);
-    // return await db.insert('players', {
-    //   'name': name,
-    //   'handicap': handicap,
-    //   'score': jsonEncode(scores),
-    // });
-  }
-
-  // Future<int> updatePlayer(
-  //     int id, String name, double handicap, List<int> scores) async {
-  //   final db = await database;
-  //   return await db.update(
-  //       'players',
-  //       {
-  //         'name': name,
-  //         'handicap': handicap,
-  //         'score': jsonEncode(scores),
-  //       },
-  //       where: 'id = ?',
-  //       whereArgs: [id]);
-  // }
-
-  Future<void> updatePlayer(Player player) async {
-    final db = await database;
-    await db.update(
-      'players',
-      player.toMap(),
-      where: 'id = ?',
-      whereArgs: [player.id],
+    await db.insert(
+      'PlayerScores',
+      {'playerIndex': playerIndex, 'holeIndex': holeIndex, 'score': score},
+      conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
 
-  Future<int> deletePlayer(int id) async {
+  Future<List<Map<String, dynamic>>> getScores() async {
     final db = await database;
-    return await db.delete(
-      'players',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    return await db.query('PlayerScores');
   }
 
-  Future<List<Player>> getPlayers() async {
+  Future<void> deleteScores() async {
     final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('players');
-    return List.generate(maps.length, (i) {
-      return Player.fromMap(maps[i]);
-    });
+    await db.delete('PlayerScores');
   }
-
-  // Future<List<Map<String, dynamic>>> getPlayers() async {
-  //   final db = await database;
-  //   return await db.query('players');
-  // }
 }
