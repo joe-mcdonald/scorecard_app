@@ -4,13 +4,16 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:scorecard_app/course_data_provider.dart';
 import 'package:scorecard_app/scale_factor_provider.dart';
 import 'package:scorecard_app/widgets/course_action_sheet.dart';
+import 'package:scorecard_app/widgets/match_play_results_row.dart';
 import 'package:scorecard_app/widgets/player_row.dart';
 import 'package:scorecard_app/models/player.dart';
 import 'package:scorecard_app/widgets/settings_page.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite/sqflite.dart';
 import 'database_helper.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -34,10 +37,10 @@ class _HomeScreenState extends State<HomeScreen> {
   List<FocusNode> focusNodes = List.generate(18, (index) => FocusNode());
 
   List<String> tees = [];
-  List<int> mensHcap = [];
-  List<int> womensHcap = [];
+  List<int> mensHcap = List.generate(18, (index) => 0);
+  List<int> womensHcap = List.generate(18, (index) => 0);
   String selectedTee = '';
-  String selectedCourse = 'shaughnessy';
+  String selectedCourse = '';
   Map<String, List<int>> yardages = {};
   Map<String, List<int>> pars = {};
 
@@ -47,12 +50,25 @@ class _HomeScreenState extends State<HomeScreen> {
   bool matchPlayMode = false;
   int _selectedIndex = 0;
   ScrollController scrollController = ScrollController();
+  bool hasSeenMatchPlayWinDialog = false;
+
+  List<int> matchPlayResults = List.generate(18, (index) => 0);
 
   @override
   void initState() {
     super.initState();
     _loadPlayers();
     _loadCourseData(selectedCourse);
+    _loadRecentCourse();
+  }
+
+  Future<void> _loadRecentCourse() async {
+    await Provider.of<CourseDataProvider>(context, listen: false)
+        .loadRecentCourse();
+    selectedCourse =
+        Provider.of<CourseDataProvider>(context, listen: false).selectedCourse;
+    selectedTee =
+        Provider.of<CourseDataProvider>(context, listen: false).selectedTees;
   }
 
   Future<void> _loadPlayers() async {
@@ -72,7 +88,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadCourseData(String course) async {
-    final rawData = await rootBundle.loadString('assets/$course - Sheet1.csv');
+    Map<String, String?> recentCourseData = await dbHelper.getRecentCourse();
+    String recentCourse = recentCourseData['courseName'] ?? '';
+
+    recentCourse = recentCourse.toLowerCase().replaceAll(' ', '');
+
+    final rawData =
+        await rootBundle.loadString('assets/$recentCourse - Sheet1.csv');
     List<List<dynamic>> csvData = const CsvToListConverter().convert(rawData);
     setState(() {
       mensHcap = csvData[3].sublist(1).map((e) => e as int).toList();
@@ -89,12 +111,36 @@ class _HomeScreenState extends State<HomeScreen> {
       selectedTee = tees[0];
       isLoading = false;
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Provider.of<CourseDataProvider>(context, listen: false)
+            .updateCourseData(
+          newPar: pars[selectedTee]!,
+          newMensHcap: mensHcap,
+          newWomensHcap: womensHcap,
+        );
+      }
+    });
+    // dbHelper.insertRecentCourse(course, selectedTee);
   }
 
   void _addPlayer() {
     setState(() {
       playersControllers
           .add(List.generate(18, (index) => TextEditingController()));
+      dbHelper.insertPlayerDetails(
+        playersControllers.length - 1,
+        '',
+        0,
+      );
+    });
+  }
+
+  void _removePlayer(int index) {
+    setState(() {
+      playersControllers.removeAt(index);
+      dbHelper.deletePlayerScores(index);
+      dbHelper.removePlayerDetails(index);
     });
   }
 
@@ -158,13 +204,13 @@ class _HomeScreenState extends State<HomeScreen> {
     return details.toString();
   }
 
-  // bool isHandicapHole(int index, int handicapDifference) {
-  //   if (mensHandicap) {
-  //     return mensHcap[index] <= handicapDifference.abs();
-  //   } else {
-  //     return womensHcap[index] <= handicapDifference.abs();
-  //   }
-  // }
+  bool isHandicapHole(int index, int handicapDifference) {
+    if (mensHandicap) {
+      return mensHcap[index] <= handicapDifference.abs();
+    } else {
+      return womensHcap[index] <= handicapDifference.abs();
+    }
+  }
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
@@ -192,6 +238,161 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Future<void> _calculateMatchPlay() async {
+    if (await dbHelper.getPlayerCount() as int < 2) return;
+    int player1Handicap = (await dbHelper.getHandicap(0) as int) ?? 0;
+    int player2Handicap = (await dbHelper.getHandicap(1) as int) ?? 0;
+    int netStrokes = player1Handicap -
+        player2Handicap; //if negative, player 2 gets strokes, if positive, player 1 gets strokes
+    matchPlayResults = List.generate(18, (index) => 0);
+    for (int i = 0; i < 18; i++) {
+      if (await dbHelper.getScoreForHole(0, i) as int == 0 ||
+          await dbHelper.getScoreForHole(1, i) as int == 0) {
+        matchPlayResults[i] = 0;
+        setState(() {});
+        return;
+      }
+      bool isHandicapHole;
+      if (mensHandicap) {
+        isHandicapHole = mensHcap[i] <= netStrokes.abs();
+      } else {
+        isHandicapHole = womensHcap[i] <= netStrokes;
+      }
+      // ignore: unrelated_type_equality_checks
+      if (await dbHelper.getScoreForHole(0, i) != '' &&
+          await dbHelper.getScoreForHole(1, i) != '') {
+        if (isHandicapHole) {
+          if (netStrokes > 0) {
+            //player 1 gets extra stroke
+            if ((await dbHelper.getScoreForHole(0, i) as int <
+                (await dbHelper.getScoreForHole(1, i) as int) + 1)) {
+              //playerindex 0 holeindex i < playerindex 1 holeindex i + 1
+              if (i == 0) {
+                matchPlayResults[i] = -1; //negative == player 1 lead
+              } else {
+                matchPlayResults[i] = matchPlayResults[i - 1] - 1;
+              }
+            } else if (await dbHelper.getScoreForHole(0, i) as int >
+                (await dbHelper.getScoreForHole(1, i) as int) + 1) {
+              //playerindex 0 holeindex i > playerindex 1 holeindex i + 1
+              if (i == 0) {
+                matchPlayResults[i] = 1; //positive  == player 2 lead
+              } else {
+                matchPlayResults[i] = matchPlayResults[i - 1] + 1;
+              }
+            } else {
+              if (i == 0) {
+                matchPlayResults[i] = 0; //tie == nothing changes
+              } else {
+                matchPlayResults[i] = matchPlayResults[i - 1];
+              }
+            }
+          } else if (netStrokes < 0) {
+            if (((await dbHelper.getScoreForHole(0, i) as int) + 1 <
+                (await dbHelper.getScoreForHole(1, i) as int))) {
+              //playerindex 0 holeindex i  + 1 < playerindex 1 holeindex i
+              if (i == 0) {
+                matchPlayResults[i] = -1; //negative == player 1 lead
+              } else {
+                matchPlayResults[i] = matchPlayResults[i - 1] - 1;
+              }
+            } else if ((await dbHelper.getScoreForHole(0, i) as int) + 1 >
+                (await dbHelper.getScoreForHole(1, i) as int)) {
+              //playerindex 0 holeindex i + 1 > playerindex 1 holeindex i
+              if (i == 0) {
+                matchPlayResults[i] = 1; //positive  == player 2 lead
+              } else {
+                matchPlayResults[i] = matchPlayResults[i - 1] + 1;
+              }
+            } else {
+              if (i == 0) {
+                matchPlayResults[i] = 0; //tie == nothing changes
+              } else {
+                matchPlayResults[i] = matchPlayResults[i - 1];
+              }
+            }
+          }
+        } else {
+          if ((await dbHelper.getScoreForHole(0, i) as int <
+              (await dbHelper.getScoreForHole(1, i) as int))) {
+            //playerindex 0 holeindex i < playerindex 1 holeindex i
+            if (i == 0) {
+              matchPlayResults[i] = -1; //negative == player 1 lead
+            } else {
+              matchPlayResults[i] = matchPlayResults[i - 1] - 1;
+            }
+          } else if (await dbHelper.getScoreForHole(0, i) as int >
+              (await dbHelper.getScoreForHole(1, i) as int)) {
+            //playerindex 0 holeindex i > playerindex 1 holeindex i
+            if (i == 0) {
+              matchPlayResults[i] = 1; //positive  == player 2 lead
+            } else {
+              matchPlayResults[i] = matchPlayResults[i - 1] + 1;
+            }
+          } else {
+            if (i == 0) {
+              matchPlayResults[i] = 0; //tie == nothing changes
+            } else {
+              matchPlayResults[i] = matchPlayResults[i - 1];
+            }
+          }
+        }
+      } else {
+        matchPlayResults[i] = 0;
+      }
+      if (!hasSeenMatchPlayWinDialog &&
+          ((i == 17 && matchPlayResults[17].abs() >= 1) ||
+              (i == 16 && matchPlayResults[16].abs() >= 2) ||
+              (i == 15 && matchPlayResults[15].abs() >= 3) ||
+              (i == 14 && matchPlayResults[14].abs() >= 4) ||
+              (i == 13 && matchPlayResults[13].abs() >= 5) ||
+              (i == 12 && matchPlayResults[12].abs() >= 6) ||
+              (i == 11 && matchPlayResults[11].abs() >= 7) ||
+              (i == 10 && matchPlayResults[10].abs() >= 8))) {
+        hasSeenMatchPlayWinDialog = true;
+        if (matchPlayResults[i] < 0) {
+          // Player 1 wins
+          showCupertinoDialog(
+            context: context,
+            builder: (BuildContext context) => CupertinoAlertDialog(
+              title: Text('${dbHelper.getPlayerName(0)} Wins!'),
+              content:
+                  Text('${dbHelper.getPlayerName(0)} has won the match play.'),
+              actions: <CupertinoDialogAction>[
+                CupertinoDialogAction(
+                  child: const Text('OK'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            ),
+          );
+        } else if (matchPlayResults[i] > 0) {
+          // Player 2 wins
+          showCupertinoDialog(
+            context: context,
+            builder: (BuildContext context) => CupertinoAlertDialog(
+              title: Text('${dbHelper.getPlayerName(1)} Wins!'),
+              content:
+                  Text('${dbHelper.getPlayerName(1)} has won the match play.'),
+              actions: <CupertinoDialogAction>[
+                CupertinoDialogAction(
+                  child: const Text('OK'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            ),
+          );
+        }
+      }
+    }
+    // Trigger a rebuild to display the results
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final scaleFactor = Provider.of<ScaleFactorProvider>(context).scaleFactor;
@@ -215,7 +416,7 @@ class _HomeScreenState extends State<HomeScreen> {
           onPressed: () => _onItemTapped(1),
         ),
         title: ElevatedButton(
-          onPressed: () {
+          onPressed: () async {
             showCupertinoModalPopup<void>(
               context: context,
               builder: (BuildContext context) => CourseActionSheet(
@@ -223,6 +424,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   setState(() {
                     selectedCourse = course;
                     selectedTee = tee;
+                    dbHelper.insertRecentCourse(course, tee);
                   });
                 },
                 onCourseDataLoaded: (loadedPars,
@@ -287,6 +489,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           setState(() {
                             selectedTee = tee;
                           });
+                          Provider.of<CourseDataProvider>(context,
+                                  listen: false)
+                              .updateCourseData(
+                            newPar: pars[selectedTee]!,
+                            newMensHcap: mensHcap,
+                            newWomensHcap: womensHcap,
+                          );
+
                           Navigator.pop(context);
                         },
                         child: Text(
@@ -483,9 +693,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           greensHit: greensHit,
                           par: par,
                           tee: selectedTee,
+                          nameController: TextEditingController(),
+                          hcapController: TextEditingController(),
                           scrollController: scrollController,
                           focusNodes: focusNodes,
                           controllers: playersControllers[0],
+                          coursePars: pars[selectedTee]!.toList(),
+                          removePlayer: _removePlayer,
+                          onScoreChanged: _calculateMatchPlay,
                         ),
                         for (int i = 1; i < playersControllers.length; i++)
                           PlayerRow(
@@ -499,11 +714,24 @@ class _HomeScreenState extends State<HomeScreen> {
                             focusNodes:
                                 List.generate(18, (index) => FocusNode()),
                             controllers: playersControllers[i],
+                            nameController: TextEditingController(),
+                            hcapController: TextEditingController(),
+                            coursePars: pars[selectedTee]!.toList(),
+                            removePlayer: _removePlayer,
+                            onScoreChanged: _calculateMatchPlay,
                           ),
                       ],
                     ),
                   ),
                 ),
+                if (matchPlayMode && dbHelper.getPlayerCount() as int == 2)
+                  MatchPlayResultsRow(
+                    matchPlayResults: matchPlayResults,
+                    playerNames: [
+                      dbHelper.getPlayerName(0).toString(),
+                      dbHelper.getPlayerName(1).toString()
+                    ],
+                  ),
               ],
             ),
           ),

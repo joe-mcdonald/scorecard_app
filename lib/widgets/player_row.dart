@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:scorecard_app/course_data_provider.dart';
 import 'package:scorecard_app/scale_factor_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:scorecard_app/database_helper.dart';
@@ -15,6 +18,11 @@ class PlayerRow extends StatefulWidget {
   final List<TextEditingController> controllers;
   final int playerIndex;
   final ScrollController scrollController;
+  final TextEditingController nameController;
+  final TextEditingController hcapController;
+  final List<int> coursePars;
+  final Function(int) removePlayer;
+  final VoidCallback onScoreChanged;
 
   const PlayerRow({
     super.key,
@@ -27,6 +35,11 @@ class PlayerRow extends StatefulWidget {
     required this.controllers,
     required this.playerIndex,
     required this.scrollController,
+    required this.nameController,
+    required this.hcapController,
+    required this.coursePars,
+    required this.removePlayer,
+    required this.onScoreChanged,
   });
 
   @override
@@ -40,6 +53,7 @@ class _PlayerRowState extends State<PlayerRow> {
   void initState() {
     super.initState();
     _loadScores();
+    // _loadPlayerDetails();
   }
 
   Future<void> _loadScores() async {
@@ -53,6 +67,22 @@ class _PlayerRowState extends State<PlayerRow> {
         });
       }
     }
+
+    final playerHandicap = await dbHelper.getHandicap(widget.playerIndex);
+    setState(() {
+      widget.hcapController.text = playerHandicap.toString();
+    });
+
+    _loadPlayerDetails();
+  }
+
+  Future<void> _loadPlayerDetails() async {
+    final playerName = await dbHelper.getPlayerName(widget.playerIndex);
+    final playerHandicap = await dbHelper.getHandicap(widget.playerIndex);
+    setState(() {
+      widget.nameController.text = playerName ?? 'Name';
+      widget.hcapController.text = playerHandicap?.toString() ?? '';
+    });
   }
 
   Future<void> _saveScore(int holeIndex, int score) async {
@@ -60,6 +90,10 @@ class _PlayerRowState extends State<PlayerRow> {
   }
 
   Widget _buildTextField(int index, double scaleFactor) {
+    List<int> tempPar = Provider.of<CourseDataProvider>(context).par;
+    List<int> tempMensHcap = Provider.of<CourseDataProvider>(context).mensHcap;
+    List<int> tempWomensHcap =
+        Provider.of<CourseDataProvider>(context).womensHcap;
     Color textColor = Colors.black; // Default color
     // if (widget.matchPlayEnabled) {
     //   if (widget.index == 0) {
@@ -111,6 +145,7 @@ class _PlayerRowState extends State<PlayerRow> {
                   setState(() {
                     widget.score[index] = value ?? 0;
                     _saveScore(index, widget.score[index]);
+                    widget.onScoreChanged();
                   });
                 },
                 // onChanged: (text) {
@@ -132,7 +167,8 @@ class _PlayerRowState extends State<PlayerRow> {
                 //   }
                 // },
                 decoration: InputDecoration(
-                  hintText: '${widget.par[index]}',
+                  // hintText: '${widget.par[index]}',
+                  hintText: '${tempPar[index]}',
                   hintStyle: const TextStyle(color: Colors.grey, fontSize: 33),
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.zero,
@@ -145,8 +181,10 @@ class _PlayerRowState extends State<PlayerRow> {
         Positioned.fill(
           child: IgnorePointer(
             child: CustomPaint(
-              painter: _ShapePainter(widget.par[index],
-                  int.tryParse(widget.controllers[index].text)),
+              // painter: _ShapePainter(widget.par[index],
+              //     int.tryParse(widget.controllers[index].text)),
+              painter: _ShapePainter(
+                  tempPar[index], int.tryParse(widget.controllers[index].text)),
             ),
           ),
         ),
@@ -157,8 +195,128 @@ class _PlayerRowState extends State<PlayerRow> {
   @override
   Widget build(BuildContext context) {
     double scaleFactor = ScaleFactorProvider().scaleFactor;
+
     return Row(
       children: [
+        GestureDetector(
+          onTap: () async {
+            await _loadPlayerDetails();
+            int playerCount = await dbHelper.getPlayerCount();
+            showCupertinoDialog(
+              context: context,
+              builder: (context) => CupertinoAlertDialog(
+                content: Column(
+                  children: [
+                    CupertinoTextField(
+                      controller: widget.nameController,
+                      maxLength: 5,
+                      placeholder: 'Name',
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: Colors.transparent),
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(12)),
+                      ),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.black, fontSize: 20),
+                    ),
+                    const SizedBox(height: 20),
+                    CupertinoTextField(
+                      controller: widget.hcapController,
+                      placeholder: 'Handicap',
+                      keyboardType: const TextInputType.numberWithOptions(
+                        signed: false,
+                        decimal: true,
+                      ),
+                      maxLength: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: Colors.transparent),
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(12)),
+                      ),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.black, fontSize: 20),
+                    ),
+                  ],
+                ),
+                actions: [
+                  if (playerCount > 1)
+                    CupertinoDialogAction(
+                      child: const Text(
+                        'Remove Player',
+                        style: TextStyle(color: CupertinoColors.systemRed),
+                      ),
+                      onPressed: () async {
+                        Navigator.of(context).pop();
+                        if (await dbHelper.getPlayerCount() > 1) {
+                          widget.removePlayer(widget.playerIndex);
+                        }
+
+                        // Remove the player row
+                      },
+                    ),
+                  CupertinoDialogAction(
+                    child: const Text(
+                      'OK',
+                      style: TextStyle(color: CupertinoColors.activeBlue),
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      setState(() {
+                        widget.nameController.text = widget.nameController.text;
+                        dbHelper.setPlayerName(
+                            widget.playerIndex, widget.nameController.text);
+                        widget.hcapController.text = widget.hcapController.text;
+                        dbHelper.setHandicap(widget.playerIndex,
+                            int.tryParse(widget.hcapController.text) ?? 0);
+                        dbHelper.insertPlayerDetails(
+                            widget.playerIndex,
+                            widget.nameController.text,
+                            int.tryParse(widget.hcapController.text) ?? 0);
+                      });
+                      // Save the name, display it on the row
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+          child: Container(
+            width: 80 * scaleFactor,
+            height: 40 * scaleFactor,
+            margin: EdgeInsets.all(2 * scaleFactor),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topRight: Radius.circular(12),
+                bottomRight: Radius.circular(12),
+                topLeft: Radius.circular(12),
+                bottomLeft: Radius.circular(12),
+              ),
+            ),
+            child: Center(
+              child: FutureBuilder<String?>(
+                future: dbHelper.getPlayerName(widget.playerIndex),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    return const Text('Error');
+                  } else {
+                    return AutoSizeText(
+                      snapshot.data.toString() ?? 'Name',
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 30,
+                      ),
+                    );
+                  }
+                },
+              ),
+            ),
+          ),
+        ),
         ...List.generate(18, (index) {
           return Container(
             width: 100 * scaleFactor,
@@ -181,6 +339,53 @@ class _PlayerRowState extends State<PlayerRow> {
             ),
           );
         }),
+        Container(
+          width: 100 * scaleFactor,
+          height: 81 * scaleFactor,
+          margin: EdgeInsets.all(2 * scaleFactor),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topRight: Radius.circular(12),
+              bottomRight: Radius.circular(12),
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AutoSizeText(
+                'F: ${widget.score.sublist(0, 9).reduce((a, b) => a + b)}',
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 18,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                minFontSize: 12,
+                textAlign: TextAlign.left,
+              ),
+              AutoSizeText(
+                'B: ${widget.score.sublist(9, 18).reduce((a, b) => a + b)}',
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 18,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                minFontSize: 12,
+                textAlign: TextAlign.left,
+              ),
+              AutoSizeText(
+                'T: ${widget.score.sublist(0, 18).reduce((a, b) => a + b) - widget.coursePars.reduce((a, b) => a + b) >= 0 ? "+" : ""}${widget.score.sublist(0, 18).reduce((a, b) => a + b) - widget.coursePars.reduce((a, b) => a + b)}/${widget.score.sublist(0, 18).reduce((a, b) => a + b)}',
+                style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold),
+                overflow: TextOverflow.ellipsis,
+                minFontSize: 12,
+                textAlign: TextAlign.left,
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }

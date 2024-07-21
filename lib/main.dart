@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:scorecard_app/course_data_provider.dart';
 import 'package:scorecard_app/database_helper.dart';
 import 'package:scorecard_app/home_screen.dart';
 import 'package:scorecard_app/scale_factor_provider.dart';
@@ -10,11 +11,13 @@ void main() {
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp])
       .then((_) async {
     await DatabaseHelper().database; // Initialize database
-    print('Database initialized');
     runApp(
-      ChangeNotifierProvider(
-        create: (context) => ScaleFactorProvider(),
-        child: const MyApp(),
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (context) => CourseDataProvider()),
+          ChangeNotifierProvider(create: (context) => ScaleFactorProvider()),
+        ],
+        child: MyApp(),
       ),
     );
   });
