@@ -157,15 +157,36 @@ class _HomeScreenState extends State<HomeScreen> {
     // dbHelper.insertRecentCourse(course, selectedTee);
   }
 
+  // void _addPlayer() {
+  //   setState(() {
+  //     playersControllers
+  //         .add(List.generate(18, (index) => TextEditingController()));
+  //     dbHelper.insertPlayerDetails(
+  //       playersControllers.length - 1,
+  //       '',
+  //       0,
+  //     );
+  //     Provider.of<CourseDataProvider>(context, listen: false)
+  //         .updatePlayerCount(playersControllers.length);
+  //   });
+  // }
+
   void _addPlayer() {
     setState(() {
+      int newPlayerIndex = playersControllers.length;
+      // Add new player controller
       playersControllers
           .add(List.generate(18, (index) => TextEditingController()));
-      dbHelper.insertPlayerDetails(
-        playersControllers.length - 1,
-        '',
-        0,
-      );
+      // Clear the controllers for the new player
+      for (var controller in playersControllers[newPlayerIndex]) {
+        controller.clear();
+      }
+      // Insert new player details in the database
+      dbHelper.insertPlayerDetails(newPlayerIndex, '', 0);
+      // Ensure the new player's scores are initialized correctly
+      for (int holeIndex = 0; holeIndex < 18; holeIndex++) {
+        dbHelper.insertScore(newPlayerIndex, holeIndex, 0);
+      }
       Provider.of<CourseDataProvider>(context, listen: false)
           .updatePlayerCount(playersControllers.length);
     });
@@ -195,6 +216,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // }
 
   void _removePlayer(int index) async {
+    // Remove player controllers and update UI
     setState(() {
       playersControllers.removeAt(index);
       dbHelper.deletePlayerScores(index);
@@ -202,24 +224,38 @@ class _HomeScreenState extends State<HomeScreen> {
       Provider.of<CourseDataProvider>(context, listen: false)
           .updatePlayerCount(playersControllers.length);
     });
+
     // Update player indices in the database
     await dbHelper.updatePlayerIndices(index);
+
     // Reload players to refresh the UI
-    _loadPlayers();
+    await _loadPlayers();
   }
 
   void _resetValues() async {
     setState(() {
-      playersControllers.clear();
-      playersControllers
-          .add(List.generate(18, (index) => TextEditingController()));
-      focusNodes.clear();
-      focusNodes.addAll(List.generate(18, (index) => FocusNode()));
+      // Clear the list of player controllers and scores except for the first player
+      playersControllers.removeRange(1, playersControllers.length);
+      // focusNodes.removeRange(1, focusNodes.length);
+
+      // Reset the first player
+      playersControllers[0] =
+          List.generate(18, (index) => TextEditingController());
+
+      // Clear the controllers
+      for (var controller in playersControllers[0]) {
+        controller.clear();
+      }
+
       fairwaysHit = List.generate(18, (index) => 0);
       score = List.generate(18, (index) => 0);
       greensHit = List.generate(18, (index) => 0);
       matchPlayResults = List.generate(18, (index) => 0);
       hasSeenMatchPlayWinDialog = false;
+
+      // Update course and tee selection
+      selectedTee = tees.isNotEmpty ? tees[0] : 'Whites';
+      selectedCourse = ''; // or the default course
     });
 
     // Clear the database
@@ -230,11 +266,14 @@ class _HomeScreenState extends State<HomeScreen> {
     await dbHelper.setPlayerName(0, '');
     await dbHelper.setHandicap(0, 0);
 
-    // Ensure only one player remains in the database
-    await dbHelper.updatePlayerIndices(1);
+    // Initialize scores for the first player
+    for (int holeIndex = 0; holeIndex < 18; holeIndex++) {
+      await dbHelper.insertScore(0, holeIndex, 0);
+    }
 
-    // Reload players to refresh the UI
-    _loadPlayers();
+    // Save the updated state
+    // _saveScores();
+    // _saveState();
   }
 
   // void _resetValues() async {

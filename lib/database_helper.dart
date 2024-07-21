@@ -92,12 +92,12 @@ class DatabaseHelper {
     }
 
     // Update the scores for players with indices greater than the removed index
-    List<Map<String, dynamic>> scores = await db.query('Scores');
+    List<Map<String, dynamic>> scores = await db.query('PlayerScores');
     for (var score in scores) {
       int currentIndex = score['playerIndex'];
       if (currentIndex > removedIndex) {
         await db.update(
-          'Scores',
+          'PlayerScores',
           {'playerIndex': currentIndex - 1},
           where: 'playerIndex = ?',
           whereArgs: [currentIndex],

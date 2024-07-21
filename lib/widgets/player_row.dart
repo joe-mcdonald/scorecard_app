@@ -61,7 +61,7 @@ class _PlayerRowState extends State<PlayerRow> {
     for (var score in scores) {
       if (score['playerIndex'] == widget.playerIndex) {
         setState(() {
-          widget.score[score['holeIndex']] = score['score'];
+          widget.score[score['holeIndex']] = score['score'] ?? 0;
           widget.controllers[score['holeIndex']].text =
               score['score'] == 0 ? '' : score['score'].toString();
         });
@@ -96,13 +96,7 @@ class _PlayerRowState extends State<PlayerRow> {
     List<int> tempWomensHcap =
         Provider.of<CourseDataProvider>(context).womensHcap;
     Color textColor = Colors.black; // Default color
-    // if (widget.matchPlayEnabled) {
-    //   if (widget.index == 0) {
-    //     textColor = Colors.red; // Player 1's color
-    //   } else if (widget.index == 1) {
-    //     textColor = const Color.fromARGB(198, 0, 0, 255); // Player 2's color
-    //   }
-    // }
+
     return Stack(
       alignment: Alignment.center,
       children: [
@@ -141,34 +135,15 @@ class _PlayerRowState extends State<PlayerRow> {
                     );
                   });
                 },
-                onChanged: (text) {
+                onChanged: (text) async {
                   int? value = int.tryParse(text);
                   setState(() {
                     widget.score[index] = value ?? 0;
-                    _saveScore(index, widget.score[index]);
-                    widget.onScoreChanged(); //temp commented out
                   });
+                  await _saveScore(index, value ?? 0);
+                  widget.onScoreChanged(); // Trigger any additional updates
                 },
-                // onChanged: (text) {
-                //   int? value = int.tryParse(text);
-                //   if (value != null) {
-                //     setState(() {
-                //       widget.score[index] = value;
-                //       _saveScores();
-                //       widget
-                //           .onScoreChanged(); // Call the callback when score changes
-                //     });
-                //   } else {
-                //     setState(() {
-                //       widget.score[index] = 0;
-                //       _saveScores();
-                //       widget
-                //           .onScoreChanged(); // Call the callback when score changes
-                //     });
-                //   }
-                // },
                 decoration: InputDecoration(
-                  // hintText: '${widget.par[index]}',
                   hintText: '${tempPar[index]}',
                   hintStyle: const TextStyle(color: Colors.grey, fontSize: 33),
                   border: InputBorder.none,
@@ -182,8 +157,6 @@ class _PlayerRowState extends State<PlayerRow> {
         Positioned.fill(
           child: IgnorePointer(
             child: CustomPaint(
-              // painter: _ShapePainter(widget.par[index],
-              //     int.tryParse(widget.controllers[index].text)),
               painter: _ShapePainter(
                   tempPar[index], int.tryParse(widget.controllers[index].text)),
             ),
