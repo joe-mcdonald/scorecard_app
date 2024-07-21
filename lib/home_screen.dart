@@ -10,6 +10,7 @@ import 'package:scorecard_app/widgets/course_action_sheet.dart';
 import 'package:scorecard_app/widgets/match_play_results_row.dart';
 import 'package:scorecard_app/widgets/player_row.dart';
 import 'package:scorecard_app/models/player.dart';
+import 'package:scorecard_app/widgets/putts_row.dart';
 import 'package:scorecard_app/widgets/settings_page.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -30,11 +31,15 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<List<TextEditingController>> playersControllers = [
     List.generate(18, (index) => TextEditingController())
   ];
+  final List<List<TextEditingController>> puttsControllers = [
+    List.generate(18, (index) => TextEditingController())
+  ];
   List<int> fairwaysHit = List.generate(18, (index) => 0);
   List<int> greensHit = List.generate(18, (index) => 0);
   List<int> score = List.generate(18, (index) => 0);
   List<int> par = [5, 4, 3, 4, 5, 4, 5, 3, 4, 4, 5, 3, 4, 4, 5, 4, 3, 4];
   List<FocusNode> focusNodes = List.generate(18, (index) => FocusNode());
+  List<FocusNode> puttsFocusNodes = List.generate(18, (index) => FocusNode());
 
   List<String> tees = [];
   List<int> mensHcap = List.generate(18, (index) => 0);
@@ -60,6 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadPlayers();
     _loadCourseData(selectedCourse);
     _loadRecentCourse();
+    _loadSettings();
   }
 
   Future<void> _loadRecentCourse() async {
@@ -71,6 +77,23 @@ class _HomeScreenState extends State<HomeScreen> {
         Provider.of<CourseDataProvider>(context, listen: false).selectedTees;
   }
 
+  // Future<void> _loadPlayers() async {
+  //   final scores = await dbHelper.getScores();
+  //   if (scores.isNotEmpty) {
+  //     setState(() {
+  //       int maxPlayerIndex = scores
+  //           .map((e) => e['playerIndex'] as int)
+  //           .reduce((a, b) => a > b ? a : b);
+  //       playersControllers.clear();
+  //       for (int i = 0; i <= maxPlayerIndex; i++) {
+  //         playersControllers
+  //             .add(List.generate(18, (index) => TextEditingController()));
+  //       }
+  //     });
+  //   }
+  //   Provider.of<CourseDataProvider>(context, listen: false)
+  //       .updatePlayerCount(playersControllers.length);
+  // }
   Future<void> _loadPlayers() async {
     final scores = await dbHelper.getScores();
     if (scores.isNotEmpty) {
@@ -84,7 +107,17 @@ class _HomeScreenState extends State<HomeScreen> {
               .add(List.generate(18, (index) => TextEditingController()));
         }
       });
+
+      // Load scores into the controllers
+      for (var score in scores) {
+        int playerIndex = score['playerIndex'];
+        int holeIndex = score['holeIndex'];
+        int scoreValue = score['score'];
+        playersControllers[playerIndex][holeIndex].text = scoreValue.toString();
+      }
     }
+    Provider.of<CourseDataProvider>(context, listen: false)
+        .updatePlayerCount(playersControllers.length);
   }
 
   Future<void> _loadCourseData(String course) async {
@@ -133,74 +166,151 @@ class _HomeScreenState extends State<HomeScreen> {
         '',
         0,
       );
+      Provider.of<CourseDataProvider>(context, listen: false)
+          .updatePlayerCount(playersControllers.length);
     });
   }
 
-  void _removePlayer(int index) {
+  // void _removePlayer(int index) async {
+  //   setState(() {
+  //     playersControllers.removeAt(index);
+  //     dbHelper.deletePlayerScores(index);
+  //     dbHelper.removePlayerDetails(index);
+  //     Provider.of<CourseDataProvider>(context, listen: false)
+  //         .updatePlayerCount(playersControllers.length);
+  //   });
+  //   if (playersControllers.isEmpty) {
+  //     setState(() {
+  //       playersControllers
+  //           .add(List.generate(18, (index) => TextEditingController()));
+  //     });
+  //     await dbHelper.insertPlayerDetails(0, '', 0);
+  //   }
+  //   // Sync the remaining players' indices with the database
+  //   for (int i = 0; i < playersControllers.length; i++) {
+  //     await dbHelper.updatePlayerIndex(i, i);
+  //   }
+  //   // Refresh the UI to reflect the correct state
+  //   setState(() {});
+  // }
+
+  void _removePlayer(int index) async {
     setState(() {
       playersControllers.removeAt(index);
       dbHelper.deletePlayerScores(index);
       dbHelper.removePlayerDetails(index);
+      Provider.of<CourseDataProvider>(context, listen: false)
+          .updatePlayerCount(playersControllers.length);
     });
+    // Update player indices in the database
+    await dbHelper.updatePlayerIndices(index);
+    // Reload players to refresh the UI
+    _loadPlayers();
   }
 
-  void _resetValues() {
+  void _resetValues() async {
     setState(() {
-      // selectedTee = tees.isNotEmpty ? tees[0] : 'Whites';
-
-      // playersScores[0] = List.generate(18, (index) => 0);
-      // score = List.generate(18, (index) => 0);
-
-      // for (var controller in playersControllers[0]) {
-      //   controller.clear();
-      // }
-
-      // fairwaysHit = List.generate(18, (index) => 0);
-      // greensHit = List.generate(18, (index) => 0);
-
-      // nameControllers[0].clear();
-      // hcapControllers[0].clear();
-
-      // matchPlayResults = List.generate(18, (index) => 0);
-
-      // playersControllers.removeRange(1, playersControllers.length);
-      // playersScores.removeRange(1, playersScores.length);
-      // playersFocusNodes.removeRange(1, playersFocusNodes.length);
-      // nameControllers.removeRange(1, nameControllers.length);
-      // hcapControllers.removeRange(1, hcapControllers.length);
-      // hasSeenMatchPlayWinDialog = false;
-
-      // _saveScores();
-      // _saveState();
+      playersControllers.clear();
+      playersControllers
+          .add(List.generate(18, (index) => TextEditingController()));
+      focusNodes.clear();
+      focusNodes.addAll(List.generate(18, (index) => FocusNode()));
+      fairwaysHit = List.generate(18, (index) => 0);
+      score = List.generate(18, (index) => 0);
+      greensHit = List.generate(18, (index) => 0);
+      matchPlayResults = List.generate(18, (index) => 0);
+      hasSeenMatchPlayWinDialog = false;
     });
+
+    // Clear the database
+    await dbHelper.deleteScores();
+    await dbHelper.deletePutts();
+
+    // Reset the first player's details
+    await dbHelper.setPlayerName(0, '');
+    await dbHelper.setHandicap(0, 0);
+
+    // Ensure only one player remains in the database
+    await dbHelper.updatePlayerIndices(1);
+
+    // Reload players to refresh the UI
+    _loadPlayers();
   }
 
-  void _shareRoundDetails() {
-    String details = _formatRoundDetails();
+  // void _resetValues() async {
+  //   setState(() {
+  //     // Clear the list of player controllers and scores except for the first player
+  //     playersControllers.removeRange(1, playersControllers.length);
+  //     // focusNodes.removeRange(1, focusNodes.length);
+  //     // playersScores.removeRange(1, playersScores.length);
+  //     // playersFocusNodes.removeRange(1, playersFocusNodes.length);
+  //     // Reset the first player
+  //     playersControllers[0] =
+  //         List.generate(18, (index) => TextEditingController());
+  //     // playersScores[0] = List.generate(18, (index) => 0);
+  //     // Clear the controllers
+  //     for (var controller in playersControllers[0]) {
+  //       controller.clear();
+  //     }
+  //     fairwaysHit = List.generate(18, (index) => 0);
+  //     score = List.generate(18, (index) => 0);
+  //     greensHit = List.generate(18, (index) => 0);
+  //     matchPlayResults = List.generate(18, (index) => 0);
+  //     hasSeenMatchPlayWinDialog = false;
+  //     // // Update course and tee selection
+  //     // selectedTee = tees.isNotEmpty ? tees[0] : 'Whites';
+  //     // selectedCourse = ''; // or the default course
+  //   });
+  //   // Clear the database
+  //   await dbHelper.deleteScores();
+  //   await dbHelper.deletePutts();
+  //   await dbHelper.clearPlayerDetails();
+  //   // Save the updated state
+  //   // _saveScores();
+  //   // _saveState();
+  // }
+
+  Future<void> _shareRoundDetails() async {
+    String details = await _formatRoundDetails();
     Share.share(details, subject: 'Golf Round Details');
   }
 
-  String _formatRoundDetails() {
+  Future<String> _formatRoundDetails() async {
     StringBuffer details = StringBuffer();
 
-    // details.writeln('Golf Round Details:');
-    // details.writeln('Course: $selectedCourse');
-    // details.writeln('Tee: $selectedTee');
-    // details.writeln('');
+    details.writeln('Golf Round Details:');
+    details.writeln('Course: $selectedCourse');
+    details.writeln('Tee: $selectedTee');
+    details.writeln('');
 
-    // for (int playerIndex = 0;
-    //     playerIndex < playersScores.length;
-    //     playerIndex++) {
-    //   details.writeln('Player: ${nameControllers[playerIndex].text}');
-    //   details.writeln('Scores: ${playersScores[playerIndex].join(', ')}');
-    //   details.writeln('');
-    // }
+    for (int playerIndex = 0;
+        playerIndex < playersControllers.length;
+        playerIndex++) {
+      String? playerName = await dbHelper.getPlayerName(playerIndex) ??
+          'Player ${playerIndex + 1}';
+      int totalScore = 0;
+      for (int holeIndex = 0; holeIndex < 18; holeIndex++) {
+        int score = await dbHelper.getScoreForHole(playerIndex, holeIndex) ?? 0;
+        totalScore += score;
+      }
+      // String scoresString =
+      //     scores.map((score) => score == 0 ? '' : score.toString()).join(', ');
 
-    // if (showPutterRow) {
-    //   details.writeln('Putts: ${puttsScores.join(', ')}');
-    //   details.writeln('');
-    // }
+      details.writeln('Player: $playerName');
+      details.writeln('Score: $totalScore');
+      details.writeln('');
+    }
 
+    if (showPutterRow) {
+      int totalPutts = 0;
+      for (int holeIndex = 0; holeIndex < 18; holeIndex++) {
+        totalPutts += await dbHelper.getPuttsForHole(holeIndex) ?? 0;
+      }
+      details.writeln('Putts: $totalPutts');
+      details.writeln('');
+    }
+
+    print(details.toString());
     return details.toString();
   }
 
@@ -239,41 +349,42 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _calculateMatchPlay() async {
-    if (await dbHelper.getPlayerCount() as int < 2) return;
-    int player1Handicap = (await dbHelper.getHandicap(0) as int) ?? 0;
-    int player2Handicap = (await dbHelper.getHandicap(1) as int) ?? 0;
+    final playerCount = await dbHelper.getPlayerCount();
+    if (playerCount < 1) return;
+
+    // if (await dbHelper.getPlayerCount() as int < 2) return;
+
+    int player1Handicap = (await dbHelper.getHandicap(0)) ?? 0;
+    int player2Handicap = (await dbHelper.getHandicap(1)) ?? 0;
     int netStrokes = player1Handicap -
         player2Handicap; //if negative, player 2 gets strokes, if positive, player 1 gets strokes
     matchPlayResults = List.generate(18, (index) => 0);
     for (int i = 0; i < 18; i++) {
-      if (await dbHelper.getScoreForHole(0, i) as int == 0 ||
-          await dbHelper.getScoreForHole(1, i) as int == 0) {
+      final player1Score = await dbHelper.getScoreForHole(0, i);
+      final player2Score = await dbHelper.getScoreForHole(1, i);
+      if (player1Score == 0 || player2Score == 0) {
         matchPlayResults[i] = 0;
         setState(() {});
         return;
       }
-      bool isHandicapHole;
-      if (mensHandicap) {
-        isHandicapHole = mensHcap[i] <= netStrokes.abs();
-      } else {
-        isHandicapHole = womensHcap[i] <= netStrokes;
-      }
+
+      final isHandicapHole = mensHandicap
+          ? mensHcap[i] <= netStrokes.abs()
+          : womensHcap[i] <= netStrokes;
+
       // ignore: unrelated_type_equality_checks
-      if (await dbHelper.getScoreForHole(0, i) != '' &&
-          await dbHelper.getScoreForHole(1, i) != '') {
+      if (player1Score != 0 && player2Score != 0) {
         if (isHandicapHole) {
           if (netStrokes > 0) {
             //player 1 gets extra stroke
-            if ((await dbHelper.getScoreForHole(0, i) as int <
-                (await dbHelper.getScoreForHole(1, i) as int) + 1)) {
+            if ((player1Score < player2Score + 1)) {
               //playerindex 0 holeindex i < playerindex 1 holeindex i + 1
               if (i == 0) {
                 matchPlayResults[i] = -1; //negative == player 1 lead
               } else {
                 matchPlayResults[i] = matchPlayResults[i - 1] - 1;
               }
-            } else if (await dbHelper.getScoreForHole(0, i) as int >
-                (await dbHelper.getScoreForHole(1, i) as int) + 1) {
+            } else if (player1Score > (player2Score) + 1) {
               //playerindex 0 holeindex i > playerindex 1 holeindex i + 1
               if (i == 0) {
                 matchPlayResults[i] = 1; //positive  == player 2 lead
@@ -288,16 +399,14 @@ class _HomeScreenState extends State<HomeScreen> {
               }
             }
           } else if (netStrokes < 0) {
-            if (((await dbHelper.getScoreForHole(0, i) as int) + 1 <
-                (await dbHelper.getScoreForHole(1, i) as int))) {
+            if (((player1Score) + 1 < (player2Score))) {
               //playerindex 0 holeindex i  + 1 < playerindex 1 holeindex i
               if (i == 0) {
                 matchPlayResults[i] = -1; //negative == player 1 lead
               } else {
                 matchPlayResults[i] = matchPlayResults[i - 1] - 1;
               }
-            } else if ((await dbHelper.getScoreForHole(0, i) as int) + 1 >
-                (await dbHelper.getScoreForHole(1, i) as int)) {
+            } else if ((player1Score) + 1 > (player2Score)) {
               //playerindex 0 holeindex i + 1 > playerindex 1 holeindex i
               if (i == 0) {
                 matchPlayResults[i] = 1; //positive  == player 2 lead
@@ -313,16 +422,14 @@ class _HomeScreenState extends State<HomeScreen> {
             }
           }
         } else {
-          if ((await dbHelper.getScoreForHole(0, i) as int <
-              (await dbHelper.getScoreForHole(1, i) as int))) {
+          if ((player1Score < (player2Score))) {
             //playerindex 0 holeindex i < playerindex 1 holeindex i
             if (i == 0) {
               matchPlayResults[i] = -1; //negative == player 1 lead
             } else {
               matchPlayResults[i] = matchPlayResults[i - 1] - 1;
             }
-          } else if (await dbHelper.getScoreForHole(0, i) as int >
-              (await dbHelper.getScoreForHole(1, i) as int)) {
+          } else if (player1Score > (player2Score)) {
             //playerindex 0 holeindex i > playerindex 1 holeindex i
             if (i == 0) {
               matchPlayResults[i] = 1; //positive  == player 2 lead
@@ -391,6 +498,28 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     // Trigger a rebuild to display the results
     setState(() {});
+  }
+
+  void _toggleFairway(int index) {
+    setState(() {
+      fairwaysHit[index] = fairwaysHit[index] == 0 ? 1 : 0;
+      // _saveScores();
+    });
+  }
+
+  void _toggleGreen(int index) {
+    setState(() {
+      greensHit[index] = greensHit[index] == 0 ? 1 : 0;
+      // _saveScores();
+    });
+  }
+
+  int _countFairwaysHit() {
+    return fairwaysHit.where((hit) => hit == 1).length;
+  }
+
+  int _countGreensHit() {
+    return greensHit.where((hit) => hit == 1).length;
   }
 
   @override
@@ -615,73 +744,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 5),
-                // Row(
-                //   children: List.generate(18, (index) {
-                //     return Container(
-                //       width: 100,
-                //       height: 100,
-                //       margin: const EdgeInsets.all(2),
-                //       decoration: BoxDecoration(
-                //         color: Colors.white,
-                //         borderRadius: BorderRadius.only(
-                //           topLeft:
-                //               index == 0 ? const Radius.circular(12) : Radius.zero,
-                //           topRight:
-                //               index == 17 ? const Radius.circular(12) : Radius.zero,
-                //         ),
-                //       ),
-                //       child: Center(
-                //         child: Text('Hole ${index + 1}'),
-                //       ),
-                //     );
-                //   }),
-                // ),
-                // Row(
-                //   children: List.generate(18, (index) {
-                //     return Container(
-                //       width: 100,
-                //       height: 100,
-                //       margin: const EdgeInsets.all(2),
-                //       decoration: BoxDecoration(
-                //         color: Colors.white,
-                //         borderRadius: BorderRadius.only(
-                //           topLeft:
-                //               index == 0 ? const Radius.circular(12) : Radius.zero,
-                //           topRight:
-                //               index == 17 ? const Radius.circular(12) : Radius.zero,
-                //         ),
-                //       ),
-                //       child: Center(
-                //         child: Text('Par ${par[index]}'),
-                //       ),
-                //     );
-                //   }),
-                // ),
-                // Row(
-                //   children: List.generate(
-                //     18,
-                //     (index) {
-                //       return Container(
-                //         width: 100,
-                //         height: 100,
-                //         margin: const EdgeInsets.all(2),
-                //         decoration: BoxDecoration(
-                //           color: Colors.white,
-                //           borderRadius: BorderRadius.only(
-                //             topLeft:
-                //                 index == 0 ? const Radius.circular(12) : Radius.zero,
-                //             topRight:
-                //                 index == 17 ? const Radius.circular(12) : Radius.zero,
-                //           ),
-                //         ),
-                //         child: Center(
-                //           child: Text(
-                //               'Yard ${index}'), // Replace with actual yardage data
-                //         ),
-                //       );
-                //     },
-                //   ),
-                // ),
                 Expanded(
                   child: SingleChildScrollView(
                     child: Column(
@@ -720,17 +782,134 @@ class _HomeScreenState extends State<HomeScreen> {
                             removePlayer: _removePlayer,
                             onScoreChanged: _calculateMatchPlay,
                           ),
+                        if (matchPlayMode &&
+                            Provider.of<CourseDataProvider>(context)
+                                    .playerCount ==
+                                2)
+                          FutureBuilder<List<String?>>(
+                            future: Future.wait([
+                              dbHelper.getPlayerName(0),
+                              dbHelper.getPlayerName(1),
+                            ]),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return CircularProgressIndicator();
+                              } else if (snapshot.hasError) {
+                                return Text('Error loading player names');
+                              } else {
+                                final playerNames = snapshot.data!;
+                                return MatchPlayResultsRow(
+                                  matchPlayResults: matchPlayResults,
+                                  playerNames: [
+                                    playerNames[0] ?? 'Player 1',
+                                    playerNames[1] ?? 'Player 2'
+                                  ],
+                                );
+                              }
+                            },
+                          ),
                       ],
                     ),
                   ),
                 ),
-                if (matchPlayMode && dbHelper.getPlayerCount() as int == 2)
-                  MatchPlayResultsRow(
-                    matchPlayResults: matchPlayResults,
-                    playerNames: [
-                      dbHelper.getPlayerName(0).toString(),
-                      dbHelper.getPlayerName(1).toString()
-                    ],
+                if (showPutterRow)
+                  Padding(
+                    padding: EdgeInsets.only(left: 0 * scaleFactor),
+                    child: PuttsRow(
+                      playerIndex: 0,
+                      scrollController: scrollController,
+                      controllers:
+                          puttsControllers.isEmpty ? [] : puttsControllers[0],
+                      focusNodes: puttsFocusNodes,
+                    ),
+                  ),
+                if (showFairwayGreen) // Conditionally render the row based on the switch state
+                  Padding(
+                    padding: EdgeInsets.only(right: 20.0 * scaleFactor),
+                    child: Row(
+                      children: List.generate(
+                        18,
+                        (index) {
+                          return Container(
+                            width: 100 * scaleFactor,
+                            height: 70 * scaleFactor,
+                            margin: EdgeInsets.all(2 * scaleFactor),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.only(
+                                topLeft: index == 0
+                                    ? const Radius.circular(12)
+                                    : Radius.zero,
+                                topRight: index == 17
+                                    ? const Radius.circular(12)
+                                    : Radius.zero,
+                                bottomLeft: index == 0
+                                    ? const Radius.circular(12)
+                                    : Radius.zero,
+                                bottomRight: index == 17
+                                    ? const Radius.circular(12)
+                                    : Radius.zero,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                if (pars[selectedTee]?[index] == 4 ||
+                                    pars[selectedTee]?[index] == 5)
+                                  SizedBox(
+                                    height: 35 * scaleFactor,
+                                    child: TextButton(
+                                      onPressed: () => _toggleFairway(index),
+                                      child: Text(
+                                        'Fairway',
+                                        style: TextStyle(
+                                          fontSize: 13 * scaleFactor,
+                                          color: fairwaysHit[index] == 1
+                                              ? Colors.green
+                                              : Colors.red,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                if (pars[selectedTee]?[index] == 4 ||
+                                    pars[selectedTee]?[index] == 5)
+                                  SizedBox(
+                                    height: 35 * scaleFactor,
+                                    child: TextButton(
+                                      onPressed: () => _toggleGreen(index),
+                                      child: Text(
+                                        'Green',
+                                        style: TextStyle(
+                                          fontSize: 13 * scaleFactor,
+                                          color: greensHit[index] == 1
+                                              ? Colors.green
+                                              : Colors.red,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                if (pars[selectedTee]?[index] == 3)
+                                  SizedBox(
+                                    height: 70 * scaleFactor,
+                                    child: TextButton(
+                                      onPressed: () => _toggleGreen(index),
+                                      child: Text(
+                                        'Green',
+                                        style: TextStyle(
+                                          fontSize: 13 * scaleFactor,
+                                          color: greensHit[index] == 1
+                                              ? Colors.green
+                                              : Colors.red,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                   ),
               ],
             ),

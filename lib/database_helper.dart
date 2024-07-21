@@ -51,6 +51,14 @@ class DatabaseHelper {
         tees TEXT
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE Putts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        holeIndex INTEGER,
+        putts INTEGER
+      )
+    ''');
   }
 
   Future<void> insertScore(int playerIndex, int holeIndex, int score) async {
@@ -60,6 +68,42 @@ class DatabaseHelper {
       {'playerIndex': playerIndex, 'holeIndex': holeIndex, 'score': score},
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+  }
+
+  Future<void> removePlayerScores() {
+    return deleteScores();
+  }
+
+  Future<void> updatePlayerIndices(int removedIndex) async {
+    final db = await database;
+
+    // Update the player indices
+    List<Map<String, dynamic>> playerDetails = await db.query('PlayerDetails');
+    for (var player in playerDetails) {
+      int currentIndex = player['playerIndex'];
+      if (currentIndex > removedIndex) {
+        await db.update(
+          'PlayerDetails',
+          {'playerIndex': currentIndex - 1},
+          where: 'playerIndex = ?',
+          whereArgs: [currentIndex],
+        );
+      }
+    }
+
+    // Update the scores for players with indices greater than the removed index
+    List<Map<String, dynamic>> scores = await db.query('Scores');
+    for (var score in scores) {
+      int currentIndex = score['playerIndex'];
+      if (currentIndex > removedIndex) {
+        await db.update(
+          'Scores',
+          {'playerIndex': currentIndex - 1},
+          where: 'playerIndex = ?',
+          whereArgs: [currentIndex],
+        );
+      }
+    }
   }
 
   Future<List<Map<String, dynamic>>> getScores() async {
@@ -75,7 +119,7 @@ class DatabaseHelper {
       whereArgs: [playerIndex, holeIndex],
     );
     if (maps.isNotEmpty) {
-      return maps.first['score'] as int;
+      return maps.last['score'] as int;
     } else {
       return 0;
     }
@@ -111,7 +155,7 @@ class DatabaseHelper {
     if (maps.isNotEmpty) {
       return maps.first['name'] as String?;
     } else {
-      return 'Name';
+      return null;
     }
   }
 
@@ -144,6 +188,22 @@ class DatabaseHelper {
     );
   }
 
+  Future<void> updatePlayerIndex(int oldIndex, int newIndex) async {
+    final db = await database;
+    await db.update(
+      'PlayerDetails',
+      {'playerIndex': newIndex},
+      where: 'playerIndex = ?',
+      whereArgs: [oldIndex],
+    );
+    await db.update(
+      'PlayerScores',
+      {'playerIndex': newIndex},
+      where: 'playerIndex = ?',
+      whereArgs: [oldIndex],
+    );
+  }
+
   Future<void> removePlayerDetails(int playerIndex) async {
     final db = await database;
     await db.delete('PlayerDetails',
@@ -159,6 +219,15 @@ class DatabaseHelper {
     final db = await database;
     await db.delete('PlayerScores',
         where: 'playerIndex = ?', whereArgs: [playerIndex]);
+  }
+
+  Future<void> clearPlayerDetails() async {
+    final db = await database;
+
+    await db.delete('PlayerDetails');
+    // Insert a blank entry for the first player
+    await db
+        .insert('PlayerDetails', {'playerIndex': 0, 'name': '', 'handicap': 0});
   }
 
   Future<void> updatePlayerName(int playerIndex, String newName) async {
@@ -189,6 +258,34 @@ class DatabaseHelper {
       };
     } else {
       return {'courseName': 'Shaughnessy G&CC', 'tees': 'Whites'};
+    }
+  }
+
+  Future<void> insertPutts(int holeIndex, int putts) async {
+    final db = await database;
+    await db.insert(
+      'Putts',
+      {'holeIndex': holeIndex, 'putts': putts},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> deletePutts() async {
+    final db = await database;
+    await db.delete('Putts');
+  }
+
+  Future<int> getPuttsForHole(int holeIndex) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'Putts',
+      where: 'holeIndex = ?',
+      whereArgs: [holeIndex],
+    );
+    if (maps.isNotEmpty) {
+      return maps.last['putts'] as int;
+    } else {
+      return 0;
     }
   }
 }

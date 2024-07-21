@@ -3,13 +3,13 @@ import 'package:scorecard_app/database_helper.dart';
 
 class CourseDataProvider extends ChangeNotifier {
   List<int> _par = [];
-  List<int> _mensHcap = [];
-  List<int> _womensHcap = [];
-  // Other course-related data can be added here
-
   List<int> get par => _par;
+  List<int> _mensHcap = [];
   List<int> get mensHcap => _mensHcap;
+  List<int> _womensHcap = [];
   List<int> get womensHcap => _womensHcap;
+  int _playerCount = 1;
+  int get playerCount => _playerCount;
 
   String _selectedCourse = 'Default Course';
   String get selectedCourse => _selectedCourse;
@@ -32,13 +32,19 @@ class CourseDataProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateCourseData(
-      {required List<int> newPar,
-      required List<int> newMensHcap,
-      required List<int> newWomensHcap}) {
+  void updateCourseData({
+    required List<int> newPar,
+    required List<int> newMensHcap,
+    required List<int> newWomensHcap,
+  }) {
     _par = newPar;
     _mensHcap = newMensHcap;
     _womensHcap = newWomensHcap;
+    notifyListeners();
+  }
+
+  void updatePlayerCount(int newPlayerCount) {
+    _playerCount = newPlayerCount;
     notifyListeners();
   }
 }

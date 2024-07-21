@@ -63,7 +63,7 @@ class _PlayerRowState extends State<PlayerRow> {
         setState(() {
           widget.score[score['holeIndex']] = score['score'];
           widget.controllers[score['holeIndex']].text =
-              score['score'].toString();
+              score['score'] == 0 ? '' : score['score'].toString();
         });
       }
     }
@@ -80,12 +80,13 @@ class _PlayerRowState extends State<PlayerRow> {
     final playerName = await dbHelper.getPlayerName(widget.playerIndex);
     final playerHandicap = await dbHelper.getHandicap(widget.playerIndex);
     setState(() {
-      widget.nameController.text = playerName ?? 'Name';
+      widget.nameController.text = playerName ?? '';
       widget.hcapController.text = playerHandicap?.toString() ?? '';
     });
   }
 
   Future<void> _saveScore(int holeIndex, int score) async {
+    // await dbHelper.insertScore(widget.playerIndex, holeIndex, score ?? 0);
     await dbHelper.insertScore(widget.playerIndex, holeIndex, score);
   }
 
@@ -145,7 +146,7 @@ class _PlayerRowState extends State<PlayerRow> {
                   setState(() {
                     widget.score[index] = value ?? 0;
                     _saveScore(index, widget.score[index]);
-                    widget.onScoreChanged();
+                    widget.onScoreChanged(); //temp commented out
                   });
                 },
                 // onChanged: (text) {
@@ -194,7 +195,7 @@ class _PlayerRowState extends State<PlayerRow> {
 
   @override
   Widget build(BuildContext context) {
-    double scaleFactor = ScaleFactorProvider().scaleFactor;
+    final scaleFactor = Provider.of<ScaleFactorProvider>(context).scaleFactor;
 
     return Row(
       children: [
@@ -203,6 +204,7 @@ class _PlayerRowState extends State<PlayerRow> {
             await _loadPlayerDetails();
             int playerCount = await dbHelper.getPlayerCount();
             showCupertinoDialog(
+              // ignore: use_build_context_synchronously
               context: context,
               builder: (context) => CupertinoAlertDialog(
                 content: Column(
@@ -299,19 +301,20 @@ class _PlayerRowState extends State<PlayerRow> {
               child: FutureBuilder<String?>(
                 future: dbHelper.getPlayerName(widget.playerIndex),
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const CircularProgressIndicator();
-                  } else if (snapshot.hasError) {
-                    return const Text('Error');
-                  } else {
-                    return AutoSizeText(
-                      snapshot.data.toString() ?? 'Name',
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 30,
-                      ),
-                    );
-                  }
+                  // if (snapshot.connectionState == ConnectionState.waiting) {
+                  // return const CircularProgressIndicator();
+                  // } else if (snapshot.hasError) {
+                  // return const Text('Error');
+                  // } else {
+                  return AutoSizeText(
+                    snapshot.data ?? '',
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 30,
+                    ),
+                  );
+                  // }
+                  // }
                 },
               ),
             ),

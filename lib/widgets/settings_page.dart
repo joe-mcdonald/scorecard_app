@@ -94,7 +94,7 @@ class _SettingsPageState extends State<SettingsPage> {
         children: [
           const Text(
             'Settings',
-            style: TextStyle(fontSize: 35, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 35.0, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 20),
           Row(
