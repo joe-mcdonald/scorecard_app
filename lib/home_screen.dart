@@ -36,9 +36,11 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
   List<int> fairwaysHit = List.generate(18, (index) => 0);
   List<int> greensHit = List.generate(18, (index) => 0);
-  List<int> score = List.generate(18, (index) => 0);
+  List<List<int>> score =
+      List.generate(4, (index) => List.generate(18, (index) => 0));
   List<int> par = [5, 4, 3, 4, 5, 4, 5, 3, 4, 4, 5, 3, 4, 4, 5, 4, 3, 4];
-  List<FocusNode> focusNodes = List.generate(18, (index) => FocusNode());
+  List<List<FocusNode>> focusNodes =
+      List.generate(4, (index) => List.generate(18, (index) => FocusNode()));
   List<FocusNode> puttsFocusNodes = List.generate(18, (index) => FocusNode());
 
   List<String> tees = [];
@@ -248,7 +250,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       fairwaysHit = List.generate(18, (index) => 0);
-      score = List.generate(18, (index) => 0);
+      score = List.generate(4, (index) => List.generate(18, (index) => 0));
       greensHit = List.generate(18, (index) => 0);
       matchPlayResults = List.generate(18, (index) => 0);
       hasSeenMatchPlayWinDialog = false;
@@ -501,9 +503,8 @@ class _HomeScreenState extends State<HomeScreen> {
           showCupertinoDialog(
             context: context,
             builder: (BuildContext context) => CupertinoAlertDialog(
-              title: Text('${dbHelper.getPlayerName(0)} Wins!'),
-              content:
-                  Text('${dbHelper.getPlayerName(0)} has won the match play.'),
+              title: Text('Player 1 Wins!'),
+              content: Text('Player 1 has won the match play.'),
               actions: <CupertinoDialogAction>[
                 CupertinoDialogAction(
                   child: const Text('OK'),
@@ -519,9 +520,8 @@ class _HomeScreenState extends State<HomeScreen> {
           showCupertinoDialog(
             context: context,
             builder: (BuildContext context) => CupertinoAlertDialog(
-              title: Text('${dbHelper.getPlayerName(1)} Wins!'),
-              content:
-                  Text('${dbHelper.getPlayerName(1)} has won the match play.'),
+              title: Text('Player 2 Wins!'),
+              content: Text('Player 2 has won the match play.'),
               actions: <CupertinoDialogAction>[
                 CupertinoDialogAction(
                   child: const Text('OK'),
@@ -789,7 +789,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         PlayerRow(
                           playerIndex: 0,
-                          score: score,
+                          score: score[0],
                           fairwaysHit: fairwaysHit,
                           greensHit: greensHit,
                           par: par,
@@ -797,7 +797,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           nameController: TextEditingController(),
                           hcapController: TextEditingController(),
                           scrollController: scrollController,
-                          focusNodes: focusNodes,
+                          focusNodes: focusNodes[0],
                           controllers: playersControllers[0],
                           coursePars: pars[selectedTee]!.toList(),
                           removePlayer: _removePlayer,
@@ -808,12 +808,13 @@ class _HomeScreenState extends State<HomeScreen> {
                             playerIndex: i,
                             tee: selectedTee,
                             scrollController: scrollController,
-                            score: List.generate(18, (index) => 0),
+                            score: score[i],
                             fairwaysHit: List.generate(18, (index) => 0),
                             greensHit: List.generate(18, (index) => 0),
                             par: par,
-                            focusNodes:
-                                List.generate(18, (index) => FocusNode()),
+                            // focusNodes:
+                            //     List.generate(18, (index) => FocusNode()),
+                            focusNodes: focusNodes[i],
                             controllers: playersControllers[i],
                             nameController: TextEditingController(),
                             hcapController: TextEditingController(),
@@ -848,108 +849,112 @@ class _HomeScreenState extends State<HomeScreen> {
                               }
                             },
                           ),
+                        if (showPutterRow)
+                          Padding(
+                            padding: EdgeInsets.only(left: 0 * scaleFactor),
+                            child: PuttsRow(
+                              playerIndex: 0,
+                              scrollController: scrollController,
+                              controllers: puttsControllers.isEmpty
+                                  ? []
+                                  : puttsControllers[0],
+                              focusNodes: puttsFocusNodes,
+                            ),
+                          ),
+                        if (showFairwayGreen) // Conditionally render the row based on the switch state
+                          Padding(
+                            padding: EdgeInsets.only(right: 20.0 * scaleFactor),
+                            child: Row(
+                              children: List.generate(
+                                18,
+                                (index) {
+                                  return Container(
+                                    width: 100 * scaleFactor,
+                                    height: 70 * scaleFactor,
+                                    margin: EdgeInsets.all(2 * scaleFactor),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.only(
+                                        topLeft: index == 0
+                                            ? const Radius.circular(12)
+                                            : Radius.zero,
+                                        topRight: index == 17
+                                            ? const Radius.circular(12)
+                                            : Radius.zero,
+                                        bottomLeft: index == 0
+                                            ? const Radius.circular(12)
+                                            : Radius.zero,
+                                        bottomRight: index == 17
+                                            ? const Radius.circular(12)
+                                            : Radius.zero,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        if (pars[selectedTee]?[index] == 4 ||
+                                            pars[selectedTee]?[index] == 5)
+                                          SizedBox(
+                                            height: 35 * scaleFactor,
+                                            child: TextButton(
+                                              onPressed: () =>
+                                                  _toggleFairway(index),
+                                              child: Text(
+                                                'Fairway',
+                                                style: TextStyle(
+                                                  fontSize: 13 * scaleFactor,
+                                                  color: fairwaysHit[index] == 1
+                                                      ? Colors.green
+                                                      : Colors.red,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        if (pars[selectedTee]?[index] == 4 ||
+                                            pars[selectedTee]?[index] == 5)
+                                          SizedBox(
+                                            height: 35 * scaleFactor,
+                                            child: TextButton(
+                                              onPressed: () =>
+                                                  _toggleGreen(index),
+                                              child: Text(
+                                                'Green',
+                                                style: TextStyle(
+                                                  fontSize: 13 * scaleFactor,
+                                                  color: greensHit[index] == 1
+                                                      ? Colors.green
+                                                      : Colors.red,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        if (pars[selectedTee]?[index] == 3)
+                                          SizedBox(
+                                            height: 70 * scaleFactor,
+                                            child: TextButton(
+                                              onPressed: () =>
+                                                  _toggleGreen(index),
+                                              child: Text(
+                                                'Green',
+                                                style: TextStyle(
+                                                  fontSize: 13 * scaleFactor,
+                                                  color: greensHit[index] == 1
+                                                      ? Colors.green
+                                                      : Colors.red,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
                 ),
-                if (showPutterRow)
-                  Padding(
-                    padding: EdgeInsets.only(left: 0 * scaleFactor),
-                    child: PuttsRow(
-                      playerIndex: 0,
-                      scrollController: scrollController,
-                      controllers:
-                          puttsControllers.isEmpty ? [] : puttsControllers[0],
-                      focusNodes: puttsFocusNodes,
-                    ),
-                  ),
-                if (showFairwayGreen) // Conditionally render the row based on the switch state
-                  Padding(
-                    padding: EdgeInsets.only(right: 20.0 * scaleFactor),
-                    child: Row(
-                      children: List.generate(
-                        18,
-                        (index) {
-                          return Container(
-                            width: 100 * scaleFactor,
-                            height: 70 * scaleFactor,
-                            margin: EdgeInsets.all(2 * scaleFactor),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.only(
-                                topLeft: index == 0
-                                    ? const Radius.circular(12)
-                                    : Radius.zero,
-                                topRight: index == 17
-                                    ? const Radius.circular(12)
-                                    : Radius.zero,
-                                bottomLeft: index == 0
-                                    ? const Radius.circular(12)
-                                    : Radius.zero,
-                                bottomRight: index == 17
-                                    ? const Radius.circular(12)
-                                    : Radius.zero,
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                if (pars[selectedTee]?[index] == 4 ||
-                                    pars[selectedTee]?[index] == 5)
-                                  SizedBox(
-                                    height: 35 * scaleFactor,
-                                    child: TextButton(
-                                      onPressed: () => _toggleFairway(index),
-                                      child: Text(
-                                        'Fairway',
-                                        style: TextStyle(
-                                          fontSize: 13 * scaleFactor,
-                                          color: fairwaysHit[index] == 1
-                                              ? Colors.green
-                                              : Colors.red,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                if (pars[selectedTee]?[index] == 4 ||
-                                    pars[selectedTee]?[index] == 5)
-                                  SizedBox(
-                                    height: 35 * scaleFactor,
-                                    child: TextButton(
-                                      onPressed: () => _toggleGreen(index),
-                                      child: Text(
-                                        'Green',
-                                        style: TextStyle(
-                                          fontSize: 13 * scaleFactor,
-                                          color: greensHit[index] == 1
-                                              ? Colors.green
-                                              : Colors.red,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                if (pars[selectedTee]?[index] == 3)
-                                  SizedBox(
-                                    height: 70 * scaleFactor,
-                                    child: TextButton(
-                                      onPressed: () => _toggleGreen(index),
-                                      child: Text(
-                                        'Green',
-                                        style: TextStyle(
-                                          fontSize: 13 * scaleFactor,
-                                          color: greensHit[index] == 1
-                                              ? Colors.green
-                                              : Colors.red,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),
@@ -961,17 +966,18 @@ class _HomeScreenState extends State<HomeScreen> {
           height: 80,
           child: Row(
             children: <Widget>[
-              GestureDetector(
-                onTap: () {
-                  _addPlayer();
-                },
-                child: const Row(
-                  children: [
-                    SizedBox(width: 8),
-                    Icon(Icons.add),
-                  ],
+              if (playersControllers.length < 4)
+                GestureDetector(
+                  onTap: () {
+                    _addPlayer();
+                  },
+                  child: const Row(
+                    children: [
+                      SizedBox(width: 8),
+                      Icon(Icons.add),
+                    ],
+                  ),
                 ),
-              ),
 
               // if (showFairwayGreen)
               //   Padding(

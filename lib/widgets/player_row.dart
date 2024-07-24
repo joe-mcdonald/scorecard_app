@@ -48,12 +48,28 @@ class PlayerRow extends StatefulWidget {
 
 class _PlayerRowState extends State<PlayerRow> {
   final dbHelper = DatabaseHelper();
+  late List<FocusNode> allFocusNodes;
 
   @override
   void initState() {
     super.initState();
     _loadScores();
-    // _loadPlayerDetails();
+    _initializeFocusListeners();
+  }
+
+  void _initializeFocusListeners() {
+    allFocusNodes = widget.focusNodes;
+    for (var focusNode in allFocusNodes) {
+      focusNode.addListener(() {
+        if (!focusNode.hasFocus) {
+          for (var node in allFocusNodes) {
+            if (node != focusNode) {
+              node.unfocus();
+            }
+          }
+        }
+      });
+    }
   }
 
   Future<void> _loadScores() async {
@@ -61,7 +77,7 @@ class _PlayerRowState extends State<PlayerRow> {
     for (var score in scores) {
       if (score['playerIndex'] == widget.playerIndex) {
         setState(() {
-          widget.score[score['holeIndex']] = score['score'] ?? 0;
+          widget.score[score['holeIndex']] = score['score'];
           widget.controllers[score['holeIndex']].text =
               score['score'] == 0 ? '' : score['score'].toString();
         });
@@ -86,16 +102,12 @@ class _PlayerRowState extends State<PlayerRow> {
   }
 
   Future<void> _saveScore(int holeIndex, int score) async {
-    // await dbHelper.insertScore(widget.playerIndex, holeIndex, score ?? 0);
     await dbHelper.insertScore(widget.playerIndex, holeIndex, score);
   }
 
   Widget _buildTextField(int index, double scaleFactor) {
     List<int> tempPar = Provider.of<CourseDataProvider>(context).par;
-    List<int> tempMensHcap = Provider.of<CourseDataProvider>(context).mensHcap;
-    List<int> tempWomensHcap =
-        Provider.of<CourseDataProvider>(context).womensHcap;
-    Color textColor = Colors.black; // Default color
+    Color textColor = Colors.black;
 
     return Stack(
       alignment: Alignment.center,
@@ -105,6 +117,11 @@ class _PlayerRowState extends State<PlayerRow> {
           child: GestureDetector(
             onTap: () {
               setState(() {
+                // for (var node in widget.focusNodes) {
+                //   if (node != widget.focusNodes[index]) {
+                //     node.unfocus();
+                //   }
+                // }
                 widget.focusNodes[index].requestFocus();
                 widget.controllers[index].selection = TextSelection(
                   baseOffset: 0,
@@ -128,6 +145,11 @@ class _PlayerRowState extends State<PlayerRow> {
                 textAlign: TextAlign.center,
                 onTap: () {
                   setState(() {
+                    // for (var node in widget.focusNodes) {
+                    //   if (node != widget.focusNodes[index]) {
+                    //     node.unfocus();
+                    //   }
+                    // }
                     widget.focusNodes[index].requestFocus();
                     widget.controllers[index].selection = TextSelection(
                       baseOffset: 0,
@@ -141,7 +163,7 @@ class _PlayerRowState extends State<PlayerRow> {
                     widget.score[index] = value ?? 0;
                   });
                   await _saveScore(index, value ?? 0);
-                  widget.onScoreChanged(); // Trigger any additional updates
+                  widget.onScoreChanged();
                 },
                 decoration: InputDecoration(
                   hintText: '${tempPar[index]}',
@@ -177,13 +199,14 @@ class _PlayerRowState extends State<PlayerRow> {
             await _loadPlayerDetails();
             int playerCount = await dbHelper.getPlayerCount();
             showCupertinoDialog(
-              // ignore: use_build_context_synchronously
               context: context,
               builder: (context) => CupertinoAlertDialog(
                 content: Column(
                   children: [
                     CupertinoTextField(
                       controller: widget.nameController,
+                      keyboardType: TextInputType.text,
+                      enableSuggestions: false,
                       maxLength: 5,
                       placeholder: 'Name',
                       decoration: BoxDecoration(
@@ -227,8 +250,6 @@ class _PlayerRowState extends State<PlayerRow> {
                         if (await dbHelper.getPlayerCount() > 1) {
                           widget.removePlayer(widget.playerIndex);
                         }
-
-                        // Remove the player row
                       },
                     ),
                   CupertinoDialogAction(
@@ -250,7 +271,6 @@ class _PlayerRowState extends State<PlayerRow> {
                             widget.nameController.text,
                             int.tryParse(widget.hcapController.text) ?? 0);
                       });
-                      // Save the name, display it on the row
                     },
                   ),
                 ],
@@ -274,11 +294,6 @@ class _PlayerRowState extends State<PlayerRow> {
               child: FutureBuilder<String?>(
                 future: dbHelper.getPlayerName(widget.playerIndex),
                 builder: (context, snapshot) {
-                  // if (snapshot.connectionState == ConnectionState.waiting) {
-                  // return const CircularProgressIndicator();
-                  // } else if (snapshot.hasError) {
-                  // return const Text('Error');
-                  // } else {
                   return AutoSizeText(
                     snapshot.data ?? '',
                     style: const TextStyle(
@@ -286,8 +301,6 @@ class _PlayerRowState extends State<PlayerRow> {
                       fontSize: 30,
                     ),
                   );
-                  // }
-                  // }
                 },
               ),
             ),
@@ -390,25 +403,21 @@ class _ShapePainter extends CustomPainter {
   }
 
   void _drawCircles(Canvas canvas, Size size, int count) {
-    final radius =
-        size.width / 3; // Adjust radius to ensure circles are smaller
+    final radius = size.width / 3;
     final center = Offset(size.width / 2, size.height / 2);
 
     for (int i = 0; i < count; i++) {
       final offset = Offset(
-        center.dx +
-            (i - (count - 1) / 2) *
-                radius *
-                0, // Further reduce the offset to fully overlap circles
+        center.dx + (i - (count - 1) / 2) * radius * 0,
         center.dy,
       );
       canvas.drawCircle(
         offset,
-        radius - i * 8, // Adjust size to create smaller inner circles
+        radius - i * 8,
         Paint()
           ..color = Colors.black
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 3.0, // Ensure thickness matches squares
+          ..strokeWidth = 3.0,
       );
     }
   }
@@ -418,11 +427,10 @@ class _ShapePainter extends CustomPainter {
     final paint = Paint()
       ..color = Colors.black
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0; // Make squares thicker
+      ..strokeWidth = 3.0;
 
     for (int i = 0; i < count; i++) {
-      final halfSize =
-          size.width / 5 * (1 - 0.3 * i); // smaller size to fit within grid
+      final halfSize = size.width / 5 * (1 - 0.3 * i);
       canvas.drawRect(
         Rect.fromCenter(
             center: center, width: halfSize * 3, height: halfSize * 3),

@@ -17,6 +17,10 @@ void main() {
           ChangeNotifierProvider(create: (context) => CourseDataProvider()),
           ChangeNotifierProvider(create: (context) => ScaleFactorProvider()),
         ],
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(boldText: false),
+          child: child!,
+        ),
         child: MyApp(),
       ),
     );
