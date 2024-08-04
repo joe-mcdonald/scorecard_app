@@ -58,24 +58,24 @@ class _PlayerRowState extends State<PlayerRow> {
   @override
   void initState() {
     super.initState();
-    _initializeFocusListeners();
+    // _initializeFocusListeners();
     _loadScores();
   }
 
-  void _initializeFocusListeners() {
-    allFocusNodes = widget.focusNodes;
-    for (var focusNode in allFocusNodes) {
-      focusNode.addListener(() {
-        if (!focusNode.hasFocus) {
-          for (var node in allFocusNodes) {
-            if (node != focusNode) {
-              node.unfocus();
-            }
-          }
-        }
-      });
-    }
-  }
+  // void _initializeFocusListeners() {
+  //   allFocusNodes = widget.focusNodes;
+  //   for (var focusNode in allFocusNodes) {
+  //     focusNode.addListener(() {
+  //       if (!focusNode.hasFocus) {
+  //         for (var node in allFocusNodes) {
+  //           if (node != focusNode) {
+  //             node.unfocus();
+  //           }
+  //         }
+  //       }
+  //     });
+  //   }
+  // }
 
   Future<void> _loadScores() async {
     final scores = await dbHelper.getScores();
@@ -126,12 +126,9 @@ class _PlayerRowState extends State<PlayerRow> {
               padding: EdgeInsets.all(10 * scaleFactor),
               child: GestureDetector(
                 onTap: () {
-                  // setState(() {
-                  // for (var node in widget.focusNodes) {
-                  //   if (node != widget.focusNodes[index]) {
-                  //     node.unfocus();
-                  //   }
-                  // }
+                  for (FocusNode focusNode in widget.focusNodes) {
+                    focusNode.nextFocus();
+                  }
                   widget.focusNodes[index].requestFocus();
                   widget.controllers[index].selection = TextSelection(
                     baseOffset: 0,
@@ -145,7 +142,26 @@ class _PlayerRowState extends State<PlayerRow> {
                     duration: const Duration(milliseconds: 50),
                     curve: Curves.easeInOut,
                   );
+                  // setState(() {
+                  //   for (var node in widget.focusNodes) {
+                  //     if (node != widget.focusNodes[index]) {
+                  //       node.unfocus();
+                  //     }
+                  //   }
                   // });
+                  // widget.focusNodes[index].requestFocus();
+                  // widget.controllers[index].selection = TextSelection(
+                  //   baseOffset: 0,
+                  //   extentOffset: widget.controllers[index].text.length,
+                  // );
+                  // double screenWidth = MediaQuery.of(context).size.width;
+                  // double targetScrollPosition =
+                  //     ((index * 105.0 + 10) - (screenWidth / 2 - 100));
+                  // widget.scrollController.animateTo(
+                  //   targetScrollPosition,
+                  //   duration: const Duration(milliseconds: 50),
+                  //   curve: Curves.easeInOut,
+                  // );
                 },
                 child: Center(
                   child: TextField(
@@ -154,12 +170,6 @@ class _PlayerRowState extends State<PlayerRow> {
                     keyboardType: TextInputType.number,
                     textAlign: TextAlign.center,
                     onTap: () {
-                      // setState(() {
-                      // for (var node in widget.focusNodes) {
-                      //   if (node != widget.focusNodes[index]) {
-                      //     node.unfocus();
-                      //   }
-                      // }
                       widget.focusNodes[index].requestFocus();
                       widget.controllers[index].selection = TextSelection(
                         baseOffset: 0,
@@ -430,6 +440,14 @@ class _PlayerRowState extends State<PlayerRow> {
       ],
     );
   }
+
+//   @override
+//   void dispose() {
+//     for (var focusNode in widget.focusNodes) {
+//       focusNode.dispose();
+//     }
+//     super.dispose();
+//   }
 }
 
 class _ShapePainter extends CustomPainter {
