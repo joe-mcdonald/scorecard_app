@@ -1,6 +1,8 @@
 import 'package:csv/csv.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:scorecard_app/course_data_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class CourseActionSheet extends StatefulWidget {
@@ -64,6 +66,12 @@ class _CourseActionSheetState extends State<CourseActionSheet> {
           pars, mensHcap, womensHcap, tees, yardages, selectedTee);
       widget.onCourseSelected(courseName, selectedTee);
     });
+
+    Provider.of<CourseDataProvider>(context, listen: false).updateCourseData(
+      newPar: pars[selectedTee]!,
+      newMensHcap: mensHcap,
+      newWomensHcap: womensHcap,
+    );
   }
 
   String encodeQueryParameters(Map<String, String> params) {
@@ -120,32 +128,38 @@ class _CourseActionSheetState extends State<CourseActionSheet> {
         message: const Text('Select a course.',
             style: TextStyle(fontSize: 20, color: CupertinoColors.systemGrey)),
         actions: [
-          _buildAction('beachgrove', 'Beach Grove Golf Club', 'Tsawwassen, BC'),
-          _buildAction('bigskygc', 'Big Sky Golf Club', 'Pemberton, BC'),
+          _buildAction(
+              'beachgrovegolfclub', 'Beach Grove Golf Club', 'Tsawwassen, BC'),
+          _buildAction('bigskygolfclub', 'Big Sky Golf Club', 'Pemberton, BC'),
           _buildAction('calclub', 'Cal Club', 'San Francisco, CA'),
-          _buildAction('cordovabay', 'Cordova Bay Golf Course', 'Victoria, BC'),
-          _buildAction(
-              'fairmontwhistler', 'Chateau Fairmont Whistler', 'Whistler, BC'),
-          _buildAction('highlandpacific', 'Highland Pacific Golf Course',
+          _buildAction('cordovabaygolfcourse', 'Cordova Bay Golf Course',
               'Victoria, BC'),
+          _buildAction('chateaufairmontwhistler', 'Chateau Fairmont Whistler',
+              'Whistler, BC'),
+          _buildAction('highlandpacificgolfcourse',
+              'Highland Pacific Golf Course', 'Victoria, BC'),
           _buildAction(
-              'marinedrive', 'Marine Drive Golf Club', 'Vancouver, BC'),
-          _buildAction('mcleery', 'McLeery Golf Course', 'Vancouver, BC'),
-          _buildAction('morgancreek', 'Morgan Creek Golf Course', 'Surrey, BC'),
-          _buildAction('musqueam', 'Musqueam Golf Course', 'Vancouver, BC'),
+              'marinedrivegolfclub', 'Marine Drive Golf Club', 'Vancouver, BC'),
           _buildAction(
-              'nicklausnorth', 'Nicklaus North Golf Club', 'Whistler, BC'),
+              'mcleerygolfcourse', 'McLeery Golf Course', 'Vancouver, BC'),
+          _buildAction('morgancreekgolfcourse', 'Morgan Creek Golf Course',
+              'Surrey, BC'),
           _buildAction(
-              'pheasantglen', 'Pheasant Glen Golf Resort', 'Nanaimo, BC'),
-          _buildAction('pointgrey', 'Point Grey G&CC', 'Vancouver, BC'),
+              'musqueamgolfcourse', 'Musqueam Golf Course', 'Vancouver, BC'),
+          _buildAction('nicklausnorthgolfclub', 'Nicklaus North Golf Club',
+              'Whistler, BC'),
+          _buildAction('pheasantglengolfresort', 'Pheasant Glen Golf Resort',
+              'Nanaimo, BC'),
+          _buildAction('pointgreyg&cc', 'Point Grey G&CC', 'Vancouver, BC'),
           _buildAction(
-              'royalcolwood', 'Royal Colwood Golf Club', 'Colwood, BC'),
-          _buildAction('shaughnessy', 'Shaughnessy G&CC', 'Vancouver, BC'),
+              'royalcolwoodgolfclub', 'Royal Colwood Golf Club', 'Colwood, BC'),
+          _buildAction('shaughnessyg&cc', 'Shaughnessy G&CC', 'Vancouver, BC'),
           _buildAction(
               'universitygolfclub', 'University Golf Club', 'Vancouver, BC'),
           _buildAction(
               'victoriagolfclub', 'Victoria Golf Club', 'Victoria, BC'),
-          _buildAction('whistlergc', 'Whistler Golf Club', 'Whistler, BC'),
+          _buildAction(
+              'whistlergolfclub', 'Whistler Golf Club', 'Whistler, BC'),
           CupertinoActionSheetAction(
             onPressed: () {
               _requestCourse();

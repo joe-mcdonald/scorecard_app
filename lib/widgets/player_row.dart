@@ -3,43 +3,48 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:scorecard_app/course_data_provider.dart';
 import 'package:scorecard_app/scale_factor_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:scorecard_app/database_helper.dart';
+import 'package:scorecard_app/home_screen.dart';
 
 class PlayerRow extends StatefulWidget {
-  final int index;
   final List<int> score;
+  final String tee;
   final List<int> fairwaysHit;
   final List<int> greensHit;
-  final Map<String, List<int>> par;
-  final String tee;
+  final List<int> par;
   final List<FocusNode> focusNodes;
   final List<TextEditingController> controllers;
+  final int playerIndex;
+  final ScrollController scrollController;
   final TextEditingController nameController;
   final TextEditingController hcapController;
-  final ScrollController scrollController;
+  final List<int> coursePars;
   final Function(int) removePlayer;
   final VoidCallback onScoreChanged;
-  final bool matchPlayEnabled;
-  final List<int> coursePars;
+  final Color? playerTeamColor;
+  final Future<bool> Function(int index, int playerIndex)? isStrokeHole;
 
   const PlayerRow({
     super.key,
-    required this.index,
     required this.score,
+    required this.tee,
     required this.fairwaysHit,
     required this.greensHit,
     required this.par,
-    required this.tee,
     required this.focusNodes,
     required this.controllers,
+    required this.playerIndex,
+    required this.scrollController,
     required this.nameController,
     required this.hcapController,
-    required this.scrollController,
+    required this.coursePars,
     required this.removePlayer,
     required this.onScoreChanged,
-    required this.matchPlayEnabled,
-    required this.coursePars,
+    this.playerTeamColor,
+    this.isStrokeHole,
   });
 
   @override
@@ -47,115 +52,193 @@ class PlayerRow extends StatefulWidget {
 }
 
 class _PlayerRowState extends State<PlayerRow> {
-  Future<void> _saveScores() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('score', jsonEncode(widget.score));
-    await prefs.setString('fairwaysHit', jsonEncode(widget.fairwaysHit));
-    await prefs.setString('greensHit', jsonEncode(widget.greensHit));
+  final dbHelper = DatabaseHelper();
+  late List<FocusNode> allFocusNodes;
+
+  @override
+  void initState() {
+    super.initState();
+    // _initializeFocusListeners();
+    _loadScores();
   }
 
-  Widget _buildTextField(int index, double scaleFactor) {
-    Color textColor = Colors.black; // Default color
-    if (widget.matchPlayEnabled) {
-      if (widget.index == 0) {
-        textColor = Colors.red; // Player 1's color
-      } else if (widget.index == 1) {
-        textColor = const Color.fromARGB(198, 0, 0, 255); // Player 2's color
+  // void _initializeFocusListeners() {
+  //   allFocusNodes = widget.focusNodes;
+  //   for (var focusNode in allFocusNodes) {
+  //     focusNode.addListener(() {
+  //       if (!focusNode.hasFocus) {
+  //         for (var node in allFocusNodes) {
+  //           if (node != focusNode) {
+  //             node.unfocus();
+  //           }
+  //         }
+  //       }
+  //     });
+  //   }
+  // }
+
+  Future<void> _loadScores() async {
+    final scores = await dbHelper.getScores();
+    for (var score in scores) {
+      if (score['playerIndex'] == widget.playerIndex) {
+        // setState(() {
+        widget.score[score['holeIndex']] = score['score'];
+        widget.controllers[score['holeIndex']].text =
+            score['score'] == 0 ? '' : score['score'].toString();
+        // });
       }
     }
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Padding(
-          padding: EdgeInsets.all(10 * scaleFactor),
-          child: GestureDetector(
-            onTap: () {
-              setState(() {
-                widget.focusNodes[index].requestFocus();
-                widget.controllers[index].selection = TextSelection(
-                  baseOffset: 0,
-                  extentOffset: widget.controllers[index].text.length,
-                );
-                double screenWidth = MediaQuery.of(context).size.width;
-                double targetScrollPosition =
-                    ((index * 105.0 + 10) - (screenWidth / 2 - 100));
-                widget.scrollController.animateTo(
-                  targetScrollPosition,
-                  duration: const Duration(milliseconds: 50),
-                  curve: Curves.easeInOut,
-                );
-              });
-            },
-            child: Center(
-              child: TextField(
-                focusNode: widget.focusNodes[index],
-                controller: widget.controllers[index],
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
+
+    final playerHandicap = await dbHelper.getHandicap(widget.playerIndex);
+    widget.hcapController.text = playerHandicap.toString();
+
+    _loadPlayerDetails();
+    setState(() {});
+  }
+
+  Future<void> _loadPlayerDetails() async {
+    final playerName = await dbHelper.getPlayerName(widget.playerIndex);
+    final playerHandicap = await dbHelper.getHandicap(widget.playerIndex);
+    // setState(() {
+    widget.nameController.text = playerName ?? '';
+    widget.hcapController.text = playerHandicap?.toString() ?? '';
+    // });
+  }
+
+  Future<void> _saveScore(int holeIndex, int score) async {
+    await dbHelper.insertScore(widget.playerIndex, holeIndex, score);
+  }
+
+  Widget _buildTextField(int index, double scaleFactor, bool isStrokeHole) {
+    List<int> tempPar = Provider.of<CourseDataProvider>(context).par;
+    Color textColor = Colors.black;
+
+    int? score = int.tryParse(widget.controllers[index].text);
+
+    return FutureBuilder<bool>(
+      future: widget.isStrokeHole?.call(index, widget.playerIndex),
+      builder: (context, snapshot) {
+        bool isStrokeHole = snapshot.data ?? false;
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            Padding(
+              padding: EdgeInsets.all(10 * scaleFactor),
+              child: GestureDetector(
                 onTap: () {
-                  setState(() {
-                    widget.focusNodes[index].requestFocus();
-                    widget.controllers[index].selection = TextSelection(
-                      baseOffset: 0,
-                      extentOffset: widget.controllers[index].text.length,
-                    );
-                  });
-                },
-                onChanged: (text) {
-                  int? value = int.tryParse(text);
-                  if (value != null) {
-                    setState(() {
-                      widget.score[index] = value;
-                      _saveScores();
-                      widget
-                          .onScoreChanged(); // Call the callback when score changes
-                    });
-                  } else {
-                    setState(() {
-                      widget.score[index] = 0;
-                      _saveScores();
-                      widget
-                          .onScoreChanged(); // Call the callback when score changes
-                    });
+                  for (FocusNode focusNode in widget.focusNodes) {
+                    focusNode.nextFocus();
                   }
+                  widget.focusNodes[index].requestFocus();
+                  widget.controllers[index].selection = TextSelection(
+                    baseOffset: 0,
+                    extentOffset: widget.controllers[index].text.length,
+                  );
+                  double screenWidth = MediaQuery.of(context).size.width;
+                  double targetScrollPosition =
+                      ((index * 105.0 + 10) - (screenWidth / 2 - 100));
+                  widget.scrollController.animateTo(
+                    targetScrollPosition,
+                    duration: const Duration(milliseconds: 50),
+                    curve: Curves.easeInOut,
+                  );
                 },
-                decoration: InputDecoration(
-                  hintText: '${widget.par[widget.tee]?[index]}',
-                  hintStyle: const TextStyle(color: Colors.grey, fontSize: 33),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
+                child: Center(
+                  child: TextField(
+                    focusNode: widget.focusNodes[index],
+                    controller: widget.controllers[index],
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    onTap: () {
+                      widget.focusNodes[index].requestFocus();
+                      widget.controllers[index].selection = TextSelection(
+                        baseOffset: 0,
+                        extentOffset: widget.controllers[index].text.length,
+                      );
+                      // });
+                    },
+                    onEditingComplete: () {
+                      if (index < 17) {
+                        widget.focusNodes[index + 1].requestFocus();
+                      } else {
+                        widget.focusNodes[index].unfocus();
+                      }
+                    },
+                    onChanged: (text) async {
+                      int? value = int.tryParse(text);
+                      widget.score[index] = value ?? 0;
+                      await _saveScore(index, value ?? 0);
+                      widget.onScoreChanged();
+                    },
+                    decoration: InputDecoration(
+                      hintText: '${tempPar.isEmpty ? 4 : tempPar[index]}',
+                      hintStyle: const TextStyle(
+                        color: Colors.grey,
+                        fontSize: 33,
+                        fontWeight: FontWeight.normal,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 33,
+                      fontWeight: FontWeight.normal,
+                    ),
+                  ),
                 ),
-                style: TextStyle(color: textColor, fontSize: 33),
               ),
             ),
-          ),
-        ),
-        Positioned.fill(
-          child: IgnorePointer(
-            child: CustomPaint(
-              painter: _ShapePainter(widget.par[widget.tee]![index],
-                  int.tryParse(widget.controllers[index].text)),
+            if (isStrokeHole)
+              Positioned(
+                top: 4,
+                right: 4,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: const BoxDecoration(
+                    color: Colors.black,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: _ShapePainter(
+                    tempPar.isEmpty ? 4 : tempPar[index],
+                    score,
+                    isStrokeHole,
+                  ),
+                ),
+              ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    double scaleFactor = Provider.of<ScaleFactorProvider>(context).scaleFactor;
+    final scaleFactor = Provider.of<ScaleFactorProvider>(context).scaleFactor;
+
     return Row(
       children: [
         GestureDetector(
-          onTap: () {
+          onTap: () async {
+            await _loadPlayerDetails();
+            int playerCount = await dbHelper.getPlayerCount();
             showCupertinoDialog(
+              // ignore: use_build_context_synchronously
               context: context,
               builder: (context) => CupertinoAlertDialog(
                 content: Column(
                   children: [
                     CupertinoTextField(
                       controller: widget.nameController,
+                      keyboardType: TextInputType.text,
+                      enableSuggestions: false,
                       maxLength: 5,
                       placeholder: 'Name',
                       decoration: BoxDecoration(
@@ -188,17 +271,19 @@ class _PlayerRowState extends State<PlayerRow> {
                   ],
                 ),
                 actions: [
-                  CupertinoDialogAction(
-                    child: const Text(
-                      'Remove Player',
-                      style: TextStyle(color: CupertinoColors.systemRed),
+                  if (playerCount > 1)
+                    CupertinoDialogAction(
+                      child: const Text(
+                        'Remove Player',
+                        style: TextStyle(color: CupertinoColors.systemRed),
+                      ),
+                      onPressed: () async {
+                        Navigator.of(context).pop();
+                        if (await dbHelper.getPlayerCount() > 1) {
+                          widget.removePlayer(widget.playerIndex);
+                        }
+                      },
                     ),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      widget.removePlayer(widget.index);
-                      // Remove the player row
-                    },
-                  ),
                   CupertinoDialogAction(
                     child: const Text(
                       'OK',
@@ -206,7 +291,18 @@ class _PlayerRowState extends State<PlayerRow> {
                     ),
                     onPressed: () {
                       Navigator.of(context).pop();
-                      // Save the name, display it on the row
+                      setState(() {
+                        widget.nameController.text = widget.nameController.text;
+                        dbHelper.setPlayerName(
+                            widget.playerIndex, widget.nameController.text);
+                        widget.hcapController.text = widget.hcapController.text;
+                        dbHelper.setHandicap(widget.playerIndex,
+                            int.tryParse(widget.hcapController.text) ?? 0);
+                        dbHelper.insertPlayerDetails(
+                            widget.playerIndex,
+                            widget.nameController.text,
+                            int.tryParse(widget.hcapController.text) ?? 0);
+                      });
                     },
                   ),
                 ],
@@ -217,9 +313,9 @@ class _PlayerRowState extends State<PlayerRow> {
             width: 80 * scaleFactor,
             height: 40 * scaleFactor,
             margin: EdgeInsets.all(2 * scaleFactor),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: widget.playerTeamColor ?? Colors.white,
+              borderRadius: const BorderRadius.only(
                 topRight: Radius.circular(12),
                 bottomRight: Radius.circular(12),
                 topLeft: Radius.circular(12),
@@ -227,42 +323,55 @@ class _PlayerRowState extends State<PlayerRow> {
               ),
             ),
             child: Center(
-              child: AutoSizeText(
-                (widget.nameController.text).isEmpty
-                    ? 'Name'
-                    : widget.nameController.text,
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 30,
-                ),
+              child: FutureBuilder<String?>(
+                future: dbHelper.getPlayerName(widget.playerIndex),
+                builder: (context, snapshot) {
+                  final playerName = snapshot.data;
+                  return AutoSizeText(
+                    playerName?.isNotEmpty == true ? playerName! : 'Name',
+                    style: TextStyle(
+                      color: playerName?.isNotEmpty == true
+                          ? Colors.black
+                          : Colors.grey,
+                      fontSize: 30,
+                    ),
+                  );
+                },
               ),
             ),
           ),
         ),
         ...List.generate(18, (index) {
-          return Container(
-            width: 100 * scaleFactor,
-            height: 80 * scaleFactor,
-            margin: EdgeInsets.all(2 * scaleFactor),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
-                bottomLeft:
-                    index == 0 ? const Radius.circular(12) : Radius.zero,
-              ),
-            ),
-            child: Center(
-              child: SizedBox(
-                width: double.infinity,
-                height: double.infinity,
-                child: _buildTextField(
-                  index,
-                  scaleFactor,
-                ),
-              ),
-            ),
-          );
+          return FutureBuilder<bool>(
+              future: widget.isStrokeHole?.call(index, widget.playerIndex),
+              builder: (context, snapshot) {
+                bool isStrokeHole = snapshot.data ?? false;
+                return Container(
+                  width: 100 * scaleFactor,
+                  height: 80 * scaleFactor,
+                  margin: EdgeInsets.all(2 * scaleFactor),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft:
+                          index == 0 ? const Radius.circular(12) : Radius.zero,
+                      bottomLeft:
+                          index == 0 ? const Radius.circular(12) : Radius.zero,
+                    ),
+                  ),
+                  child: Center(
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: double.infinity,
+                      child: _buildTextField(
+                        index,
+                        scaleFactor,
+                        isStrokeHole,
+                      ),
+                    ),
+                  ),
+                );
+              });
         }),
         Container(
           width: 100 * scaleFactor,
@@ -314,13 +423,22 @@ class _PlayerRowState extends State<PlayerRow> {
       ],
     );
   }
+
+//   @override
+//   void dispose() {
+//     for (var focusNode in widget.focusNodes) {
+//       focusNode.dispose();
+//     }
+//     super.dispose();
+//   }
 }
 
 class _ShapePainter extends CustomPainter {
   final int par;
   final int? score;
+  final bool? isStrokeHole;
 
-  _ShapePainter(this.par, this.score);
+  _ShapePainter(this.par, this.score, this.isStrokeHole);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -339,25 +457,21 @@ class _ShapePainter extends CustomPainter {
   }
 
   void _drawCircles(Canvas canvas, Size size, int count) {
-    final radius =
-        size.width / 3; // Adjust radius to ensure circles are smaller
+    final radius = size.width / 3;
     final center = Offset(size.width / 2, size.height / 2);
 
     for (int i = 0; i < count; i++) {
       final offset = Offset(
-        center.dx +
-            (i - (count - 1) / 2) *
-                radius *
-                0, // Further reduce the offset to fully overlap circles
+        center.dx + (i - (count - 1) / 2) * radius * 0,
         center.dy,
       );
       canvas.drawCircle(
         offset,
-        radius - i * 8, // Adjust size to create smaller inner circles
+        radius - i * 8,
         Paint()
           ..color = Colors.black
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 3.0, // Ensure thickness matches squares
+          ..strokeWidth = 3.0,
       );
     }
   }
@@ -367,11 +481,10 @@ class _ShapePainter extends CustomPainter {
     final paint = Paint()
       ..color = Colors.black
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0; // Make squares thicker
+      ..strokeWidth = 3.0;
 
     for (int i = 0; i < count; i++) {
-      final halfSize =
-          size.width / 5 * (1 - 0.3 * i); // smaller size to fit within grid
+      final halfSize = size.width / 5 * (1 - 0.3 * i);
       canvas.drawRect(
         Rect.fromCenter(
             center: center, width: halfSize * 3, height: halfSize * 3),

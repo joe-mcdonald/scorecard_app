@@ -1,17 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:scorecard_app/course_data_provider.dart';
+import 'package:scorecard_app/database_helper.dart';
 import 'package:scorecard_app/home_screen.dart';
 import 'package:scorecard_app/scale_factor_provider.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp])
-      .then((_) {
+      .then((_) async {
+    await DatabaseHelper().database; // Initialize database
     runApp(
-      ChangeNotifierProvider(
-        create: (context) => ScaleFactorProvider(),
-        child: const MyApp(),
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (context) => CourseDataProvider()),
+          ChangeNotifierProvider(create: (context) => ScaleFactorProvider()),
+        ],
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(boldText: false),
+          child: child!,
+        ),
+        child: MyApp(),
       ),
     );
   });
