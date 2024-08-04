@@ -142,26 +142,6 @@ class _PlayerRowState extends State<PlayerRow> {
                     duration: const Duration(milliseconds: 50),
                     curve: Curves.easeInOut,
                   );
-                  // setState(() {
-                  //   for (var node in widget.focusNodes) {
-                  //     if (node != widget.focusNodes[index]) {
-                  //       node.unfocus();
-                  //     }
-                  //   }
-                  // });
-                  // widget.focusNodes[index].requestFocus();
-                  // widget.controllers[index].selection = TextSelection(
-                  //   baseOffset: 0,
-                  //   extentOffset: widget.controllers[index].text.length,
-                  // );
-                  // double screenWidth = MediaQuery.of(context).size.width;
-                  // double targetScrollPosition =
-                  //     ((index * 105.0 + 10) - (screenWidth / 2 - 100));
-                  // widget.scrollController.animateTo(
-                  //   targetScrollPosition,
-                  //   duration: const Duration(milliseconds: 50),
-                  //   curve: Curves.easeInOut,
-                  // );
                 },
                 child: Center(
                   child: TextField(
@@ -346,10 +326,13 @@ class _PlayerRowState extends State<PlayerRow> {
               child: FutureBuilder<String?>(
                 future: dbHelper.getPlayerName(widget.playerIndex),
                 builder: (context, snapshot) {
+                  final playerName = snapshot.data;
                   return AutoSizeText(
-                    snapshot.data ?? '',
-                    style: const TextStyle(
-                      color: Colors.black,
+                    playerName?.isNotEmpty == true ? playerName! : 'Name',
+                    style: TextStyle(
+                      color: playerName?.isNotEmpty == true
+                          ? Colors.black
+                          : Colors.grey,
                       fontSize: 30,
                     ),
                   );

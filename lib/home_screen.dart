@@ -43,11 +43,11 @@ class _HomeScreenState extends State<HomeScreen> {
   List<List<int>> score =
       List.generate(4, (index) => List.generate(18, (index) => 0));
   List<int> par = [5, 4, 3, 4, 5, 4, 5, 3, 4, 4, 5, 3, 4, 4, 5, 4, 3, 4];
-  List<List<FocusNode>> focusNodes =
+  List<List<FocusNode>> playersFocusNodes =
       List.generate(4, (index) => List.generate(18, (index) => FocusNode()));
-  // final List<List<FocusNode>> focusNodes = [
-  //   List.generate(18, (index) => FocusNode())
-  // ];
+
+  // List<FocusNode> focusNodes = List.generate(18, (index) => FocusNode());
+
   List<FocusNode> puttsFocusNodes = List.generate(18, (index) => FocusNode());
 
   List<String> tees = [];
@@ -70,6 +70,8 @@ class _HomeScreenState extends State<HomeScreen> {
   bool hasSeenMatchPlayWinDialog = false;
 
   List<int> matchPlayResults = List.generate(18, (index) => 0);
+  List<int> matchPlayResultsPair1 = List.generate(18, (index) => 0);
+  List<int> matchPlayResultsPair2 = List.generate(18, (index) => 0);
 
   Timer? _debounce;
 
@@ -82,6 +84,25 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadSettings();
     _calculateMatchPlayScores();
     setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    for (var focusNode in puttsFocusNodes) {
+      focusNode.dispose();
+    }
+    for (var focusNodes in playersFocusNodes) {
+      for (var focusNode in focusNodes) {
+        focusNode.dispose();
+      }
+    }
+    for (var playerControllers in playersControllers) {
+      for (var controller in playerControllers) {
+        controller.dispose();
+      }
+    }
+    super.dispose();
   }
 
   Future<void> _loadRecentCourse() async {
@@ -227,6 +248,8 @@ class _HomeScreenState extends State<HomeScreen> {
       score = List.generate(4, (index) => List.generate(18, (index) => 0));
       greensHit = List.generate(18, (index) => 0);
       matchPlayResults = List.generate(18, (index) => 0);
+      matchPlayResultsPair1 = List.generate(18, (index) => 0);
+      matchPlayResultsPair2 = List.generate(18, (index) => 0);
       hasSeenMatchPlayWinDialog = false;
 
       // Update course and tee selection
@@ -336,12 +359,12 @@ class _HomeScreenState extends State<HomeScreen> {
     int player2Handicap = (await dbHelper.getHandicap(1)) ?? 0;
     int netStrokes = player1Handicap -
         player2Handicap; //if negative, player 2 gets strokes, if positive, player 1 gets strokes
-    matchPlayResults = List.generate(18, (index) => 0);
+    matchPlayResultsPair1 = List.generate(18, (index) => 0);
     for (int i = 0; i < 18; i++) {
       final player1Score = await dbHelper.getScoreForHole(0, i);
       final player2Score = await dbHelper.getScoreForHole(1, i);
       if (player1Score == 0 || player2Score == 0) {
-        matchPlayResults[i] = 0;
+        matchPlayResultsPair1[i] = 0;
         setState(() {});
         return;
       }
@@ -350,7 +373,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ? mensHcap[i] <= netStrokes.abs()
           : womensHcap[i] <= netStrokes;
 
-      // ignore: unrelated_type_equality_checks
       if (player1Score != 0 && player2Score != 0) {
         if (isHandicapHole) {
           if (netStrokes > 0) {
@@ -358,44 +380,44 @@ class _HomeScreenState extends State<HomeScreen> {
             if ((player1Score < player2Score + 1)) {
               //playerindex 0 holeindex i < playerindex 1 holeindex i + 1
               if (i == 0) {
-                matchPlayResults[i] = -1; //negative == player 1 lead
+                matchPlayResultsPair1[i] = -1; //negative == player 1 lead
               } else {
-                matchPlayResults[i] = matchPlayResults[i - 1] - 1;
+                matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1] - 1;
               }
             } else if (player1Score > (player2Score) + 1) {
               //playerindex 0 holeindex i > playerindex 1 holeindex i + 1
               if (i == 0) {
-                matchPlayResults[i] = 1; //positive  == player 2 lead
+                matchPlayResultsPair1[i] = 1; //positive  == player 2 lead
               } else {
-                matchPlayResults[i] = matchPlayResults[i - 1] + 1;
+                matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1] + 1;
               }
             } else {
               if (i == 0) {
-                matchPlayResults[i] = 0; //tie == nothing changes
+                matchPlayResultsPair1[i] = 0; //tie == nothing changes
               } else {
-                matchPlayResults[i] = matchPlayResults[i - 1];
+                matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1];
               }
             }
           } else if (netStrokes < 0) {
             if (((player1Score) + 1 < (player2Score))) {
               //playerindex 0 holeindex i  + 1 < playerindex 1 holeindex i
               if (i == 0) {
-                matchPlayResults[i] = -1; //negative == player 1 lead
+                matchPlayResultsPair1[i] = -1; //negative == player 1 lead
               } else {
-                matchPlayResults[i] = matchPlayResults[i - 1] - 1;
+                matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1] - 1;
               }
             } else if ((player1Score) + 1 > (player2Score)) {
               //playerindex 0 holeindex i + 1 > playerindex 1 holeindex i
               if (i == 0) {
-                matchPlayResults[i] = 1; //positive  == player 2 lead
+                matchPlayResultsPair1[i] = 1; //positive  == player 2 lead
               } else {
-                matchPlayResults[i] = matchPlayResults[i - 1] + 1;
+                matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1] + 1;
               }
             } else {
               if (i == 0) {
-                matchPlayResults[i] = 0; //tie == nothing changes
+                matchPlayResultsPair1[i] = 0; //tie == nothing changes
               } else {
-                matchPlayResults[i] = matchPlayResults[i - 1];
+                matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1];
               }
             }
           }
@@ -403,39 +425,39 @@ class _HomeScreenState extends State<HomeScreen> {
           if ((player1Score < (player2Score))) {
             //playerindex 0 holeindex i < playerindex 1 holeindex i
             if (i == 0) {
-              matchPlayResults[i] = -1; //negative == player 1 lead
+              matchPlayResultsPair1[i] = -1; //negative == player 1 lead
             } else {
-              matchPlayResults[i] = matchPlayResults[i - 1] - 1;
+              matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1] - 1;
             }
           } else if (player1Score > (player2Score)) {
             //playerindex 0 holeindex i > playerindex 1 holeindex i
             if (i == 0) {
-              matchPlayResults[i] = 1; //positive  == player 2 lead
+              matchPlayResultsPair1[i] = 1; //positive  == player 2 lead
             } else {
-              matchPlayResults[i] = matchPlayResults[i - 1] + 1;
+              matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1] + 1;
             }
           } else {
             if (i == 0) {
-              matchPlayResults[i] = 0; //tie == nothing changes
+              matchPlayResultsPair1[i] = 0; //tie == nothing changes
             } else {
-              matchPlayResults[i] = matchPlayResults[i - 1];
+              matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1];
             }
           }
         }
       } else {
-        matchPlayResults[i] = 0;
+        matchPlayResultsPair1[i] = 0;
       }
       if (!hasSeenMatchPlayWinDialog &&
-          ((i == 17 && matchPlayResults[17].abs() >= 1) ||
-              (i == 16 && matchPlayResults[16].abs() >= 2) ||
-              (i == 15 && matchPlayResults[15].abs() >= 3) ||
-              (i == 14 && matchPlayResults[14].abs() >= 4) ||
-              (i == 13 && matchPlayResults[13].abs() >= 5) ||
-              (i == 12 && matchPlayResults[12].abs() >= 6) ||
-              (i == 11 && matchPlayResults[11].abs() >= 7) ||
-              (i == 10 && matchPlayResults[10].abs() >= 8))) {
+          ((i == 17 && matchPlayResultsPair1[17].abs() >= 1) ||
+              (i == 16 && matchPlayResultsPair1[16].abs() >= 2) ||
+              (i == 15 && matchPlayResultsPair1[15].abs() >= 3) ||
+              (i == 14 && matchPlayResultsPair1[14].abs() >= 4) ||
+              (i == 13 && matchPlayResultsPair1[13].abs() >= 5) ||
+              (i == 12 && matchPlayResultsPair1[12].abs() >= 6) ||
+              (i == 11 && matchPlayResultsPair1[11].abs() >= 7) ||
+              (i == 10 && matchPlayResultsPair1[10].abs() >= 8))) {
         hasSeenMatchPlayWinDialog = true;
-        if (matchPlayResults[i] < 0) {
+        if (matchPlayResultsPair1[i] < 0) {
           // Player 1 wins
           showCupertinoDialog(
             context: context,
@@ -452,7 +474,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           );
-        } else if (matchPlayResults[i] > 0) {
+        } else if (matchPlayResultsPair1[i] > 0) {
           // Player 2 wins
           showCupertinoDialog(
             context: context,
@@ -486,12 +508,12 @@ class _HomeScreenState extends State<HomeScreen> {
     int player4Handicap = (await dbHelper.getHandicap(3)) ?? 0;
     int netStrokes = player3Handicap -
         player4Handicap; //if negative, player 2 gets strokes, if positive, player 1 gets strokes
-    matchPlayResults = List.generate(18, (index) => 0);
+    matchPlayResultsPair2 = List.generate(18, (index) => 0);
     for (int i = 0; i < 18; i++) {
       final player3Score = await dbHelper.getScoreForHole(2, i);
       final player4Score = await dbHelper.getScoreForHole(3, i);
       if (player3Score == 0 || player4Score == 0) {
-        matchPlayResults[i] = 0;
+        matchPlayResultsPair2[i] = 0;
         setState(() {});
         return;
       }
@@ -508,44 +530,44 @@ class _HomeScreenState extends State<HomeScreen> {
             if ((player3Score < player4Score + 1)) {
               //playerindex 0 holeindex i < playerindex 1 holeindex i + 1
               if (i == 0) {
-                matchPlayResults[i] = -1; //negative == player 1 lead
+                matchPlayResultsPair2[i] = -1; //negative == player 1 lead
               } else {
-                matchPlayResults[i] = matchPlayResults[i - 1] - 1;
+                matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1] - 1;
               }
             } else if (player3Score > (player4Score) + 1) {
               //playerindex 0 holeindex i > playerindex 1 holeindex i + 1
               if (i == 0) {
-                matchPlayResults[i] = 1; //positive  == player 2 lead
+                matchPlayResultsPair2[i] = 1; //positive  == player 2 lead
               } else {
-                matchPlayResults[i] = matchPlayResults[i - 1] + 1;
+                matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1] + 1;
               }
             } else {
               if (i == 0) {
-                matchPlayResults[i] = 0; //tie == nothing changes
+                matchPlayResultsPair2[i] = 0; //tie == nothing changes
               } else {
-                matchPlayResults[i] = matchPlayResults[i - 1];
+                matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1];
               }
             }
           } else if (netStrokes < 0) {
             if (((player3Score) + 1 < (player4Score))) {
               //playerindex 0 holeindex i  + 1 < playerindex 1 holeindex i
               if (i == 0) {
-                matchPlayResults[i] = -1; //negative == player 1 lead
+                matchPlayResultsPair2[i] = -1; //negative == player 1 lead
               } else {
-                matchPlayResults[i] = matchPlayResults[i - 1] - 1;
+                matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1] - 1;
               }
             } else if ((player3Score) + 1 > (player4Score)) {
               //playerindex 0 holeindex i + 1 > playerindex 1 holeindex i
               if (i == 0) {
-                matchPlayResults[i] = 1; //positive  == player 2 lead
+                matchPlayResultsPair2[i] = 1; //positive  == player 2 lead
               } else {
-                matchPlayResults[i] = matchPlayResults[i - 1] + 1;
+                matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1] + 1;
               }
             } else {
               if (i == 0) {
-                matchPlayResults[i] = 0; //tie == nothing changes
+                matchPlayResultsPair2[i] = 0; //tie == nothing changes
               } else {
-                matchPlayResults[i] = matchPlayResults[i - 1];
+                matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1];
               }
             }
           }
@@ -553,39 +575,39 @@ class _HomeScreenState extends State<HomeScreen> {
           if ((player3Score < (player4Score))) {
             //playerindex 0 holeindex i < playerindex 1 holeindex i
             if (i == 0) {
-              matchPlayResults[i] = -1; //negative == player 1 lead
+              matchPlayResultsPair2[i] = -1; //negative == player 1 lead
             } else {
-              matchPlayResults[i] = matchPlayResults[i - 1] - 1;
+              matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1] - 1;
             }
           } else if (player3Score > (player4Score)) {
             //playerindex 0 holeindex i > playerindex 1 holeindex i
             if (i == 0) {
-              matchPlayResults[i] = 1; //positive  == player 2 lead
+              matchPlayResultsPair2[i] = 1; //positive  == player 2 lead
             } else {
-              matchPlayResults[i] = matchPlayResults[i - 1] + 1;
+              matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1] + 1;
             }
           } else {
             if (i == 0) {
-              matchPlayResults[i] = 0; //tie == nothing changes
+              matchPlayResultsPair2[i] = 0; //tie == nothing changes
             } else {
-              matchPlayResults[i] = matchPlayResults[i - 1];
+              matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1];
             }
           }
         }
       } else {
-        matchPlayResults[i] = 0;
+        matchPlayResultsPair2[i] = 0;
       }
       if (!hasSeenMatchPlayWinDialog &&
-          ((i == 17 && matchPlayResults[17].abs() >= 1) ||
-              (i == 16 && matchPlayResults[16].abs() >= 2) ||
-              (i == 15 && matchPlayResults[15].abs() >= 3) ||
-              (i == 14 && matchPlayResults[14].abs() >= 4) ||
-              (i == 13 && matchPlayResults[13].abs() >= 5) ||
-              (i == 12 && matchPlayResults[12].abs() >= 6) ||
-              (i == 11 && matchPlayResults[11].abs() >= 7) ||
-              (i == 10 && matchPlayResults[10].abs() >= 8))) {
+          ((i == 17 && matchPlayResultsPair2[17].abs() >= 1) ||
+              (i == 16 && matchPlayResultsPair2[16].abs() >= 2) ||
+              (i == 15 && matchPlayResultsPair2[15].abs() >= 3) ||
+              (i == 14 && matchPlayResultsPair2[14].abs() >= 4) ||
+              (i == 13 && matchPlayResultsPair2[13].abs() >= 5) ||
+              (i == 12 && matchPlayResultsPair2[12].abs() >= 6) ||
+              (i == 11 && matchPlayResultsPair2[11].abs() >= 7) ||
+              (i == 10 && matchPlayResultsPair2[10].abs() >= 8))) {
         hasSeenMatchPlayWinDialog = true;
-        if (matchPlayResults[i] < 0) {
+        if (matchPlayResultsPair2[i] < 0) {
           // Player 1 wins
           showCupertinoDialog(
             context: context,
@@ -602,7 +624,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           );
-        } else if (matchPlayResults[i] > 0) {
+        } else if (matchPlayResultsPair2[i] > 0) {
           // Player 2 wins
           showCupertinoDialog(
             context: context,
@@ -899,6 +921,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _calculateMatchPlayScores() async {
     if (matchPlayMode) {
+      int playerCount = Provider.of<CourseDataProvider>(context).playerCount;
       if (teamMatchPlayMode) {
         if (matchPlayFormat == 'Four Ball') {
           await _calculateTeamMatchPlayFourBall();
@@ -906,11 +929,15 @@ class _HomeScreenState extends State<HomeScreen> {
           await _calculateTeamMatchPlayAlternateShot();
         }
       } else {
-        if (Provider.of<CourseDataProvider>(context).playerCount == 2) {
+        if (playerCount == 2 || playerCount == 3 || playerCount == 4) {
           await _calculateMatchPlay12();
-        } else if (Provider.of<CourseDataProvider>(context).playerCount == 4) {
-          await _calculateMatchPlay34();
+          if (Provider.of<CourseDataProvider>(context).playerCount == 4) {
+            await _calculateMatchPlay34();
+          }
         }
+        // if (Provider.of<CourseDataProvider>(context).playerCount == 4) {
+        //   await _calculateMatchPlay34();
+        // }
       }
     }
     setState(() {});
@@ -1041,33 +1068,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 Padding(
                   padding: EdgeInsets.only(right: 20 * scaleFactor),
                   child: Row(
-                    children: List.generate(18, (index) {
-                      return IgnorePointer(
-                        ignoring: false,
-                        child: Container(
-                          width: 100 * scaleFactor,
-                          height: 110 * scaleFactor,
-                          margin: EdgeInsets.all(2 * scaleFactor),
-                          // color: Colors.white,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            // handicapHole ? Colors.grey : Colors.white,
-                            borderRadius: BorderRadius.only(
-                              topLeft: index == 0
-                                  ? const Radius.circular(12)
-                                  : Radius.zero,
-                              topRight: index == 17
-                                  ? const Radius.circular(12)
-                                  : Radius.zero,
-                              bottomLeft: index == 0
-                                  ? const Radius.circular(12)
-                                  : Radius.zero,
-                              bottomRight: index == 17
-                                  ? const Radius.circular(12)
-                                  : Radius.zero,
-                            ),
-                          ),
+                    children: List.generate(
+                      18,
+                      (index) {
+                        return IgnorePointer(
+                          ignoring: false,
                           child: Container(
+                            width: 100 * scaleFactor,
+                            height: 110 * scaleFactor,
+                            margin: EdgeInsets.all(2 * scaleFactor),
+                            // color: Colors.white,
                             decoration: BoxDecoration(
                               color: Colors.white,
                               // handicapHole ? Colors.grey : Colors.white,
@@ -1086,47 +1096,67 @@ class _HomeScreenState extends State<HomeScreen> {
                                     : Radius.zero,
                               ),
                             ),
-                            // color: Colors.white,
-                            child: Center(
-                              child: Column(
-                                children: [
-                                  const SizedBox(height: 5),
-                                  Text(
-                                    'Hole ${index + 1}',
-                                    style: const TextStyle(
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 20),
-                                  ),
-                                  Text(
-                                    'Par ${pars[selectedTee]?[index]}',
-                                    style: const TextStyle(
-                                        color: Colors.black, fontSize: 16),
-                                  ),
-                                  Text(
-                                    '${yardages[selectedTee]?[index] ?? 0} yards',
-                                    style: const TextStyle(
-                                        color: Colors.black, fontSize: 16),
-                                  ),
-                                  if (mensHandicap == true)
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                // handicapHole ? Colors.grey : Colors.white,
+                                borderRadius: BorderRadius.only(
+                                  topLeft: index == 0
+                                      ? const Radius.circular(12)
+                                      : Radius.zero,
+                                  topRight: index == 17
+                                      ? const Radius.circular(12)
+                                      : Radius.zero,
+                                  bottomLeft: index == 0
+                                      ? const Radius.circular(12)
+                                      : Radius.zero,
+                                  bottomRight: index == 17
+                                      ? const Radius.circular(12)
+                                      : Radius.zero,
+                                ),
+                              ),
+                              // color: Colors.white,
+                              child: Center(
+                                child: Column(
+                                  children: [
+                                    const SizedBox(height: 5),
                                     Text(
-                                      'HCap: ${mensHcap[index]}',
+                                      'Hole ${index + 1}',
+                                      style: const TextStyle(
+                                          color: Colors.black,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 20),
+                                    ),
+                                    Text(
+                                      'Par ${pars[selectedTee]?[index]}',
                                       style: const TextStyle(
                                           color: Colors.black, fontSize: 16),
                                     ),
-                                  if (mensHandicap == false)
                                     Text(
-                                      'HCap: ${womensHcap[index]}',
+                                      '${yardages[selectedTee]?[index] ?? 0} yards',
                                       style: const TextStyle(
                                           color: Colors.black, fontSize: 16),
                                     ),
-                                ],
+                                    if (mensHandicap == true)
+                                      Text(
+                                        'HCap: ${mensHcap[index]}',
+                                        style: const TextStyle(
+                                            color: Colors.black, fontSize: 16),
+                                      ),
+                                    if (mensHandicap == false)
+                                      Text(
+                                        'HCap: ${womensHcap[index]}',
+                                        style: const TextStyle(
+                                            color: Colors.black, fontSize: 16),
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      );
-                    }),
+                        );
+                      },
+                    ),
                   ),
                 ),
                 const SizedBox(height: 5),
@@ -1138,82 +1168,33 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: SingleChildScrollView(
                         child: Column(
                           children: [
-                            PlayerRow(
-                              playerIndex: 0,
-                              score: score[0],
-                              fairwaysHit: fairwaysHit,
-                              greensHit: greensHit,
-                              par: par,
-                              tee: selectedTee,
-                              nameController: TextEditingController(),
-                              hcapController: TextEditingController(),
-                              scrollController: scrollController,
-                              focusNodes: focusNodes[0],
-                              controllers: playersControllers[0],
-                              coursePars: pars[selectedTee]!.toList(),
-                              removePlayer: _removePlayer,
-                              onScoreChanged: _calculateTeamMatchPlayFourBall,
-                              playerTeamColor:
-                                  const Color.fromRGBO(255, 139, 139, 1),
-                              isStrokeHole: isStrokeHole,
-                            ),
-                            PlayerRow(
-                              playerIndex: 1,
-                              score: score[1],
-                              fairwaysHit: fairwaysHit,
-                              greensHit: greensHit,
-                              par: par,
-                              tee: selectedTee,
-                              nameController: TextEditingController(),
-                              hcapController: TextEditingController(),
-                              scrollController: scrollController,
-                              focusNodes: focusNodes[1],
-                              controllers: playersControllers[1],
-                              coursePars: pars[selectedTee]!.toList(),
-                              removePlayer: _removePlayer,
-                              onScoreChanged: _calculateTeamMatchPlayFourBall,
-                              playerTeamColor:
-                                  const Color.fromRGBO(255, 139, 139, 1),
-                              isStrokeHole: isStrokeHole,
-                            ),
-                            PlayerRow(
-                              playerIndex: 2,
-                              score: score[2],
-                              fairwaysHit: fairwaysHit,
-                              greensHit: greensHit,
-                              par: par,
-                              tee: selectedTee,
-                              nameController: TextEditingController(),
-                              hcapController: TextEditingController(),
-                              scrollController: scrollController,
-                              focusNodes: focusNodes[2],
-                              controllers: playersControllers[2],
-                              coursePars: pars[selectedTee]!.toList(),
-                              removePlayer: _removePlayer,
-                              onScoreChanged: _calculateTeamMatchPlayFourBall,
-                              playerTeamColor:
-                                  const Color.fromRGBO(171, 178, 255, 1),
-                              isStrokeHole: isStrokeHole,
-                            ),
-                            PlayerRow(
-                              playerIndex: 3,
-                              score: score[3],
-                              fairwaysHit: fairwaysHit,
-                              greensHit: greensHit,
-                              par: par,
-                              tee: selectedTee,
-                              nameController: TextEditingController(),
-                              hcapController: TextEditingController(),
-                              scrollController: scrollController,
-                              focusNodes: focusNodes[3],
-                              controllers: playersControllers[3],
-                              coursePars: pars[selectedTee]!.toList(),
-                              removePlayer: _removePlayer,
-                              onScoreChanged: _calculateTeamMatchPlayFourBall,
-                              playerTeamColor:
-                                  const Color.fromRGBO(171, 178, 255, 1),
-                              isStrokeHole: isStrokeHole,
-                            ),
+                            ...playersControllers.asMap().entries.map((entry) {
+                              int playerIndex = entry.key;
+                              List<TextEditingController> controllers =
+                                  entry.value;
+                              List<FocusNode> focusNodes =
+                                  playersFocusNodes[playerIndex];
+                              return PlayerRow(
+                                playerIndex: playerIndex,
+                                tee: selectedTee,
+                                coursePars: pars[selectedTee]!.toList(),
+                                fairwaysHit: fairwaysHit,
+                                greensHit: greensHit,
+                                par: par,
+                                score: score[playerIndex],
+                                focusNodes: focusNodes,
+                                controllers: controllers,
+                                nameController: TextEditingController(),
+                                hcapController: TextEditingController(),
+                                scrollController: scrollController,
+                                removePlayer: _removePlayer,
+                                onScoreChanged: _calculateTeamMatchPlayFourBall,
+                                playerTeamColor: playerIndex < 2
+                                    ? const Color.fromRGBO(255, 139, 139, 1)
+                                    : const Color.fromRGBO(171, 178, 255, 1),
+                                isStrokeHole: isStrokeHole,
+                              );
+                            }),
                             FutureBuilder<List<String?>>(
                               future: Future.wait([
                                 dbHelper.getPlayerName(0),
@@ -1265,86 +1246,34 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: SingleChildScrollView(
                         child: Column(
                           children: [
-                            PlayerRow(
-                              playerIndex: 0,
-                              score: score[0],
-                              fairwaysHit: fairwaysHit,
-                              greensHit: greensHit,
-                              par: par,
-                              tee: selectedTee,
-                              nameController: TextEditingController(),
-                              hcapController: TextEditingController(),
-                              scrollController: scrollController,
-                              focusNodes: focusNodes[0],
-                              controllers: playersControllers[0],
-                              coursePars: pars[selectedTee]!.toList(),
-                              removePlayer: _removePlayer,
-                              onScoreChanged:
-                                  _calculateTeamMatchPlayAlternateShot,
-                              playerTeamColor:
-                                  const Color.fromRGBO(255, 139, 139, 1),
-                              isStrokeHole: isStrokeHole,
-                            ),
-                            PlayerRow(
-                              playerIndex: 1,
-                              score: score[1],
-                              fairwaysHit: fairwaysHit,
-                              greensHit: greensHit,
-                              par: par,
-                              tee: selectedTee,
-                              nameController: TextEditingController(),
-                              hcapController: TextEditingController(),
-                              scrollController: scrollController,
-                              focusNodes: focusNodes[1],
-                              controllers: playersControllers[1],
-                              coursePars: pars[selectedTee]!.toList(),
-                              removePlayer: _removePlayer,
-                              onScoreChanged:
-                                  _calculateTeamMatchPlayAlternateShot,
-                              playerTeamColor:
-                                  const Color.fromRGBO(255, 139, 139, 1),
-                              isStrokeHole: isStrokeHole,
-                            ),
-                            PlayerRow(
-                              playerIndex: 2,
-                              score: score[2],
-                              fairwaysHit: fairwaysHit,
-                              greensHit: greensHit,
-                              par: par,
-                              tee: selectedTee,
-                              nameController: TextEditingController(),
-                              hcapController: TextEditingController(),
-                              scrollController: scrollController,
-                              focusNodes: focusNodes[2],
-                              controllers: playersControllers[2],
-                              coursePars: pars[selectedTee]!.toList(),
-                              removePlayer: _removePlayer,
-                              onScoreChanged:
-                                  _calculateTeamMatchPlayAlternateShot,
-                              playerTeamColor:
-                                  const Color.fromRGBO(171, 178, 255, 1),
-                              isStrokeHole: isStrokeHole,
-                            ),
-                            PlayerRow(
-                              playerIndex: 3,
-                              score: score[3],
-                              fairwaysHit: fairwaysHit,
-                              greensHit: greensHit,
-                              par: par,
-                              tee: selectedTee,
-                              nameController: TextEditingController(),
-                              hcapController: TextEditingController(),
-                              scrollController: scrollController,
-                              focusNodes: focusNodes[3],
-                              controllers: playersControllers[3],
-                              coursePars: pars[selectedTee]!.toList(),
-                              removePlayer: _removePlayer,
-                              onScoreChanged:
-                                  _calculateTeamMatchPlayAlternateShot,
-                              playerTeamColor:
-                                  const Color.fromRGBO(171, 178, 255, 1),
-                              isStrokeHole: isStrokeHole,
-                            ),
+                            ...playersControllers.asMap().entries.map((entry) {
+                              int playerIndex = entry.key;
+                              List<TextEditingController> controllers =
+                                  entry.value;
+                              List<FocusNode> focusNodes =
+                                  playersFocusNodes[playerIndex];
+                              return PlayerRow(
+                                playerIndex: playerIndex,
+                                tee: selectedTee,
+                                coursePars: pars[selectedTee]!.toList(),
+                                fairwaysHit: fairwaysHit,
+                                greensHit: greensHit,
+                                par: par,
+                                score: score[playerIndex],
+                                focusNodes: focusNodes,
+                                controllers: controllers,
+                                nameController: TextEditingController(),
+                                hcapController: TextEditingController(),
+                                scrollController: scrollController,
+                                removePlayer: _removePlayer,
+                                onScoreChanged:
+                                    _calculateTeamMatchPlayAlternateShot,
+                                playerTeamColor: playerIndex < 2
+                                    ? const Color.fromRGBO(255, 139, 139, 1)
+                                    : const Color.fromRGBO(171, 178, 255, 1),
+                                isStrokeHole: isStrokeHole,
+                              );
+                            }),
                             FutureBuilder<List<String?>>(
                               future: Future.wait([
                                 dbHelper.getPlayerName(0),
@@ -1400,41 +1329,34 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: SingleChildScrollView(
                       child: Column(
                         children: [
-                          PlayerRow(
-                            playerIndex: 0,
-                            score: score[0],
-                            fairwaysHit: fairwaysHit,
-                            greensHit: greensHit,
-                            par: par,
-                            tee: selectedTee,
-                            nameController: TextEditingController(),
-                            hcapController: TextEditingController(),
-                            scrollController: scrollController,
-                            focusNodes: focusNodes[0],
-                            controllers: playersControllers[0],
-                            coursePars: pars[selectedTee]!.toList(),
-                            removePlayer: _removePlayer,
-                            onScoreChanged: _calculateMatchPlay12,
-                            isStrokeHole: isStrokeHole,
-                          ),
-                          if (playersControllers.length > 1)
-                            PlayerRow(
-                              playerIndex: 1,
-                              score: score[1],
-                              fairwaysHit: fairwaysHit,
-                              greensHit: greensHit,
-                              par: par,
-                              tee: selectedTee,
-                              nameController: TextEditingController(),
-                              hcapController: TextEditingController(),
-                              scrollController: scrollController,
-                              focusNodes: focusNodes[1],
-                              controllers: playersControllers[1],
-                              coursePars: pars[selectedTee]!.toList(),
-                              removePlayer: _removePlayer,
-                              onScoreChanged: _calculateMatchPlay12,
-                              isStrokeHole: isStrokeHole,
-                            ),
+                          ...playersControllers.asMap().entries.map((entry) {
+                            int playerIndex = entry.key;
+                            List<TextEditingController> controllers =
+                                entry.value;
+                            List<FocusNode> focusNodes =
+                                playersFocusNodes[playerIndex];
+                            if (playerIndex == 0 || playerIndex == 1) {
+                              return PlayerRow(
+                                playerIndex: playerIndex,
+                                tee: selectedTee,
+                                coursePars: pars[selectedTee]!.toList(),
+                                fairwaysHit: fairwaysHit,
+                                greensHit: greensHit,
+                                par: par,
+                                score: score[playerIndex],
+                                focusNodes: focusNodes,
+                                controllers: controllers,
+                                nameController: TextEditingController(),
+                                hcapController: TextEditingController(),
+                                scrollController: scrollController,
+                                removePlayer: _removePlayer,
+                                onScoreChanged: _calculateMatchPlay12,
+                                isStrokeHole: isStrokeHole,
+                              );
+                            } else {
+                              return Container();
+                            }
+                          }),
                           if (matchPlayMode &&
                               (Provider.of<CourseDataProvider>(context)
                                           .playerCount ==
@@ -1460,7 +1382,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 } else {
                                   final playerNames = snapshot.data!;
                                   return MatchPlayResultsRow(
-                                    matchPlayResults: matchPlayResults,
+                                    matchPlayResults: matchPlayResultsPair1,
                                     playerNames: [
                                       playerNames[0] ?? 'Player 1',
                                       playerNames[1] ?? 'Player 2'
@@ -1469,46 +1391,38 @@ class _HomeScreenState extends State<HomeScreen> {
                                 }
                               },
                             ),
-                          if (playersControllers.length > 2)
-                            PlayerRow(
-                              playerIndex: 2,
-                              score: score[2],
-                              fairwaysHit: fairwaysHit,
-                              greensHit: greensHit,
-                              par: par,
-                              tee: selectedTee,
-                              nameController: TextEditingController(),
-                              hcapController: TextEditingController(),
-                              scrollController: scrollController,
-                              focusNodes: focusNodes[2],
-                              controllers: playersControllers[2],
-                              coursePars: pars[selectedTee]!.toList(),
-                              removePlayer: _removePlayer,
-                              onScoreChanged: _calculateMatchPlay34,
-                              isStrokeHole: isStrokeHole,
-                            ),
-                          if (playersControllers.length > 3)
-                            PlayerRow(
-                              playerIndex: 3,
-                              score: score[3],
-                              fairwaysHit: fairwaysHit,
-                              greensHit: greensHit,
-                              par: par,
-                              tee: selectedTee,
-                              nameController: TextEditingController(),
-                              hcapController: TextEditingController(),
-                              scrollController: scrollController,
-                              focusNodes: focusNodes[3],
-                              controllers: playersControllers[3],
-                              coursePars: pars[selectedTee]!.toList(),
-                              removePlayer: _removePlayer,
-                              onScoreChanged: _calculateMatchPlay34,
-                              isStrokeHole: isStrokeHole,
-                            ),
+                          ...playersControllers.asMap().entries.map((entry) {
+                            int playerIndex = entry.key;
+                            List<TextEditingController> controllers =
+                                entry.value;
+                            List<FocusNode> focusNodes =
+                                playersFocusNodes[playerIndex];
+                            if (playerIndex == 2 || playerIndex == 3) {
+                              return PlayerRow(
+                                playerIndex: playerIndex,
+                                tee: selectedTee,
+                                coursePars: pars[selectedTee]!.toList(),
+                                fairwaysHit: fairwaysHit,
+                                greensHit: greensHit,
+                                par: par,
+                                score: score[playerIndex],
+                                focusNodes: focusNodes,
+                                controllers: controllers,
+                                nameController: TextEditingController(),
+                                hcapController: TextEditingController(),
+                                scrollController: scrollController,
+                                removePlayer: _removePlayer,
+                                onScoreChanged: _calculateMatchPlay34,
+                                isStrokeHole: isStrokeHole,
+                              );
+                            } else {
+                              return Container();
+                            }
+                          }),
                           if (matchPlayMode &&
-                              Provider.of<CourseDataProvider>(context)
+                              (Provider.of<CourseDataProvider>(context)
                                       .playerCount ==
-                                  4)
+                                  4))
                             FutureBuilder<List<String?>>(
                               future: Future.wait([
                                 dbHelper.getPlayerName(2),
@@ -1524,7 +1438,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 } else {
                                   final playerNames = snapshot.data!;
                                   return MatchPlayResultsRow(
-                                    matchPlayResults: matchPlayResults,
+                                    matchPlayResults: matchPlayResultsPair2,
                                     playerNames: [
                                       playerNames[0] ?? 'Player 3',
                                       playerNames[1] ?? 'Player 4'
@@ -1752,16 +1666,5 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    for (var playerControllers in playersControllers) {
-      for (var controller in playerControllers) {
-        controller.dispose();
-      }
-    }
-    super.dispose();
   }
 }
