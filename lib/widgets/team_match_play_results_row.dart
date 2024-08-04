@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:scorecard_app/scale_factor_provider.dart';
 
-class MatchPlayResultsRow extends StatelessWidget {
+class TeamMatchPlayResultsRow extends StatelessWidget {
   final List<int> matchPlayResults;
-  final List<String> playerNames;
+  final List<String> teamNames;
 
-  const MatchPlayResultsRow(
-      {super.key, required this.matchPlayResults, required this.playerNames});
+  const TeamMatchPlayResultsRow({
+    super.key,
+    required this.matchPlayResults,
+    required this.teamNames,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +19,6 @@ class MatchPlayResultsRow extends StatelessWidget {
     return Row(
       children: [
         Container(
-          // width: 80 * scaleFactor,
           padding: EdgeInsets.only(right: 0 * scaleFactor),
           margin: EdgeInsets.all(2 * scaleFactor),
           decoration: const BoxDecoration(
@@ -39,7 +41,6 @@ class MatchPlayResultsRow extends StatelessWidget {
                       'Match\nPlay',
                       style: TextStyle(color: Colors.black, fontSize: 23),
                       textAlign: TextAlign.center,
-                      // textScaler: TextScaler.linear(scaleFactor),
                     ),
                   ),
                 ),
@@ -83,13 +84,9 @@ class MatchPlayResultsRow extends StatelessWidget {
                       ),
                       Text(
                         matchPlayResults[index] < 0
-                            ? playerNames[0] == ''
-                                ? 'Player 1'
-                                : playerNames[0]
+                            ? teamNames[0]
                             : matchPlayResults[index] > 0
-                                ? playerNames[1] == ''
-                                    ? 'Player 2'
-                                    : playerNames[1]
+                                ? teamNames[1]
                                 : 'Tie',
                         textAlign: TextAlign.center,
                         style: TextStyle(

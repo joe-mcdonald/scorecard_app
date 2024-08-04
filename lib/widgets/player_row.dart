@@ -7,6 +7,7 @@ import 'package:scorecard_app/course_data_provider.dart';
 import 'package:scorecard_app/scale_factor_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:scorecard_app/database_helper.dart';
+import 'package:scorecard_app/home_screen.dart';
 
 class PlayerRow extends StatefulWidget {
   final List<int> score;
@@ -23,6 +24,8 @@ class PlayerRow extends StatefulWidget {
   final List<int> coursePars;
   final Function(int) removePlayer;
   final VoidCallback onScoreChanged;
+  final Color? playerTeamColor;
+  final Future<bool> Function(int index, int playerIndex)? isStrokeHole;
 
   const PlayerRow({
     super.key,
@@ -40,6 +43,8 @@ class PlayerRow extends StatefulWidget {
     required this.coursePars,
     required this.removePlayer,
     required this.onScoreChanged,
+    this.playerTeamColor,
+    this.isStrokeHole,
   });
 
   @override
@@ -53,8 +58,8 @@ class _PlayerRowState extends State<PlayerRow> {
   @override
   void initState() {
     super.initState();
-    _loadScores();
     _initializeFocusListeners();
+    _loadScores();
   }
 
   void _initializeFocusListeners() {
@@ -76,115 +81,151 @@ class _PlayerRowState extends State<PlayerRow> {
     final scores = await dbHelper.getScores();
     for (var score in scores) {
       if (score['playerIndex'] == widget.playerIndex) {
-        setState(() {
-          widget.score[score['holeIndex']] = score['score'];
-          widget.controllers[score['holeIndex']].text =
-              score['score'] == 0 ? '' : score['score'].toString();
-        });
+        // setState(() {
+        widget.score[score['holeIndex']] = score['score'];
+        widget.controllers[score['holeIndex']].text =
+            score['score'] == 0 ? '' : score['score'].toString();
+        // });
       }
     }
 
     final playerHandicap = await dbHelper.getHandicap(widget.playerIndex);
-    setState(() {
-      widget.hcapController.text = playerHandicap.toString();
-    });
+    widget.hcapController.text = playerHandicap.toString();
 
     _loadPlayerDetails();
+    setState(() {});
   }
 
   Future<void> _loadPlayerDetails() async {
     final playerName = await dbHelper.getPlayerName(widget.playerIndex);
     final playerHandicap = await dbHelper.getHandicap(widget.playerIndex);
-    setState(() {
-      widget.nameController.text = playerName ?? '';
-      widget.hcapController.text = playerHandicap?.toString() ?? '';
-    });
+    // setState(() {
+    widget.nameController.text = playerName ?? '';
+    widget.hcapController.text = playerHandicap?.toString() ?? '';
+    // });
   }
 
   Future<void> _saveScore(int holeIndex, int score) async {
     await dbHelper.insertScore(widget.playerIndex, holeIndex, score);
   }
 
-  Widget _buildTextField(int index, double scaleFactor) {
+  Widget _buildTextField(int index, double scaleFactor, bool isStrokeHole) {
     List<int> tempPar = Provider.of<CourseDataProvider>(context).par;
     Color textColor = Colors.black;
 
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Padding(
-          padding: EdgeInsets.all(10 * scaleFactor),
-          child: GestureDetector(
-            onTap: () {
-              setState(() {
-                // for (var node in widget.focusNodes) {
-                //   if (node != widget.focusNodes[index]) {
-                //     node.unfocus();
-                //   }
-                // }
-                widget.focusNodes[index].requestFocus();
-                widget.controllers[index].selection = TextSelection(
-                  baseOffset: 0,
-                  extentOffset: widget.controllers[index].text.length,
-                );
-                double screenWidth = MediaQuery.of(context).size.width;
-                double targetScrollPosition =
-                    ((index * 105.0 + 10) - (screenWidth / 2 - 100));
-                widget.scrollController.animateTo(
-                  targetScrollPosition,
-                  duration: const Duration(milliseconds: 50),
-                  curve: Curves.easeInOut,
-                );
-              });
-            },
-            child: Center(
-              child: TextField(
-                focusNode: widget.focusNodes[index],
-                controller: widget.controllers[index],
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
+    int? score = int.tryParse(widget.controllers[index].text);
+
+    return FutureBuilder<bool>(
+      future: widget.isStrokeHole?.call(index, widget.playerIndex),
+      builder: (context, snapshot) {
+        bool isStrokeHole = snapshot.data ?? false;
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            Padding(
+              padding: EdgeInsets.all(10 * scaleFactor),
+              child: GestureDetector(
                 onTap: () {
-                  setState(() {
-                    // for (var node in widget.focusNodes) {
-                    //   if (node != widget.focusNodes[index]) {
-                    //     node.unfocus();
-                    //   }
-                    // }
-                    widget.focusNodes[index].requestFocus();
-                    widget.controllers[index].selection = TextSelection(
-                      baseOffset: 0,
-                      extentOffset: widget.controllers[index].text.length,
-                    );
-                  });
+                  // setState(() {
+                  // for (var node in widget.focusNodes) {
+                  //   if (node != widget.focusNodes[index]) {
+                  //     node.unfocus();
+                  //   }
+                  // }
+                  widget.focusNodes[index].requestFocus();
+                  widget.controllers[index].selection = TextSelection(
+                    baseOffset: 0,
+                    extentOffset: widget.controllers[index].text.length,
+                  );
+                  double screenWidth = MediaQuery.of(context).size.width;
+                  double targetScrollPosition =
+                      ((index * 105.0 + 10) - (screenWidth / 2 - 100));
+                  widget.scrollController.animateTo(
+                    targetScrollPosition,
+                    duration: const Duration(milliseconds: 50),
+                    curve: Curves.easeInOut,
+                  );
+                  // });
                 },
-                onChanged: (text) async {
-                  int? value = int.tryParse(text);
-                  setState(() {
-                    widget.score[index] = value ?? 0;
-                  });
-                  await _saveScore(index, value ?? 0);
-                  widget.onScoreChanged();
-                },
-                decoration: InputDecoration(
-                  hintText: '${tempPar[index]}',
-                  hintStyle: const TextStyle(color: Colors.grey, fontSize: 33),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
+                child: Center(
+                  child: TextField(
+                    focusNode: widget.focusNodes[index],
+                    controller: widget.controllers[index],
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    onTap: () {
+                      // setState(() {
+                      // for (var node in widget.focusNodes) {
+                      //   if (node != widget.focusNodes[index]) {
+                      //     node.unfocus();
+                      //   }
+                      // }
+                      widget.focusNodes[index].requestFocus();
+                      widget.controllers[index].selection = TextSelection(
+                        baseOffset: 0,
+                        extentOffset: widget.controllers[index].text.length,
+                      );
+                      // });
+                    },
+                    onEditingComplete: () {
+                      if (index < 17) {
+                        widget.focusNodes[index + 1].requestFocus();
+                      } else {
+                        widget.focusNodes[index].unfocus();
+                      }
+                    },
+                    onChanged: (text) async {
+                      int? value = int.tryParse(text);
+                      widget.score[index] = value ?? 0;
+                      await _saveScore(index, value ?? 0);
+                      widget.onScoreChanged();
+                    },
+                    decoration: InputDecoration(
+                      hintText: '${tempPar.isEmpty ? 4 : tempPar[index]}',
+                      hintStyle: const TextStyle(
+                        color: Colors.grey,
+                        fontSize: 33,
+                        fontWeight: FontWeight.normal,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 33,
+                      fontWeight: FontWeight.normal,
+                    ),
+                  ),
                 ),
-                style: TextStyle(color: textColor, fontSize: 33),
               ),
             ),
-          ),
-        ),
-        Positioned.fill(
-          child: IgnorePointer(
-            child: CustomPaint(
-              painter: _ShapePainter(
-                  tempPar[index], int.tryParse(widget.controllers[index].text)),
+            if (isStrokeHole)
+              Positioned(
+                top: 4,
+                right: 4,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: const BoxDecoration(
+                    color: Colors.black,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: _ShapePainter(
+                    tempPar.isEmpty ? 4 : tempPar[index],
+                    score,
+                    isStrokeHole,
+                  ),
+                ),
+              ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 
@@ -199,6 +240,7 @@ class _PlayerRowState extends State<PlayerRow> {
             await _loadPlayerDetails();
             int playerCount = await dbHelper.getPlayerCount();
             showCupertinoDialog(
+              // ignore: use_build_context_synchronously
               context: context,
               builder: (context) => CupertinoAlertDialog(
                 content: Column(
@@ -281,9 +323,9 @@ class _PlayerRowState extends State<PlayerRow> {
             width: 80 * scaleFactor,
             height: 40 * scaleFactor,
             margin: EdgeInsets.all(2 * scaleFactor),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: widget.playerTeamColor ?? Colors.white,
+              borderRadius: const BorderRadius.only(
                 topRight: Radius.circular(12),
                 bottomRight: Radius.circular(12),
                 topLeft: Radius.circular(12),
@@ -307,26 +349,36 @@ class _PlayerRowState extends State<PlayerRow> {
           ),
         ),
         ...List.generate(18, (index) {
-          return Container(
-            width: 100 * scaleFactor,
-            height: 80 * scaleFactor,
-            margin: EdgeInsets.all(2 * scaleFactor),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
-                bottomLeft:
-                    index == 0 ? const Radius.circular(12) : Radius.zero,
-              ),
-            ),
-            child: Center(
-              child: SizedBox(
-                width: double.infinity,
-                height: double.infinity,
-                child: _buildTextField(index, scaleFactor),
-              ),
-            ),
-          );
+          return FutureBuilder<bool>(
+              future: widget.isStrokeHole?.call(index, widget.playerIndex),
+              builder: (context, snapshot) {
+                bool isStrokeHole = snapshot.data ?? false;
+                return Container(
+                  width: 100 * scaleFactor,
+                  height: 80 * scaleFactor,
+                  margin: EdgeInsets.all(2 * scaleFactor),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft:
+                          index == 0 ? const Radius.circular(12) : Radius.zero,
+                      bottomLeft:
+                          index == 0 ? const Radius.circular(12) : Radius.zero,
+                    ),
+                  ),
+                  child: Center(
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: double.infinity,
+                      child: _buildTextField(
+                        index,
+                        scaleFactor,
+                        isStrokeHole,
+                      ),
+                    ),
+                  ),
+                );
+              });
         }),
         Container(
           width: 100 * scaleFactor,
@@ -383,8 +435,9 @@ class _PlayerRowState extends State<PlayerRow> {
 class _ShapePainter extends CustomPainter {
   final int par;
   final int? score;
+  final bool? isStrokeHole;
 
-  _ShapePainter(this.par, this.score);
+  _ShapePainter(this.par, this.score, this.isStrokeHole);
 
   @override
   void paint(Canvas canvas, Size size) {

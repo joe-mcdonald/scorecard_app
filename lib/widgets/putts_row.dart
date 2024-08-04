@@ -71,13 +71,13 @@ class _PuttsRowState extends State<PuttsRow> {
             keyboardType: TextInputType.number,
             textAlign: TextAlign.center,
             onTap: () {
-              setState(() {
-                widget.focusNodes[index].requestFocus();
-                widget.controllers[index].selection = TextSelection(
-                  baseOffset: 0,
-                  extentOffset: widget.controllers[index].text.length,
-                );
-              });
+              // setState(() {  // Might need to add this back in
+              widget.focusNodes[index].requestFocus();
+              widget.controllers[index].selection = TextSelection(
+                baseOffset: 0,
+                extentOffset: widget.controllers[index].text.length,
+              );
+              // });
             },
             onChanged: (text) {
               int? value = int.tryParse(text);
