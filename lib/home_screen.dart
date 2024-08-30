@@ -369,9 +369,12 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      final isHandicapHole = mensHandicap
-          ? mensHcap[i] <= netStrokes.abs()
-          : womensHcap[i] <= netStrokes;
+      bool isHandicapHole = false;
+      if (mensHandicap) {
+        isHandicapHole = mensHcap[i] <= netStrokes.abs();
+      } else {
+        isHandicapHole = womensHcap[i] <= netStrokes;
+      }
 
       if (player1Score != 0 && player2Score != 0) {
         if (isHandicapHole) {
