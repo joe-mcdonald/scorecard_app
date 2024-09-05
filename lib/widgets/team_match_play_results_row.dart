@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:scorecard_app/scale_factor_provider.dart';
 
@@ -15,6 +16,37 @@ class TeamMatchPlayResultsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scaleFactor = Provider.of<ScaleFactorProvider>(context).scaleFactor;
+    String? frontNineWinner;
+    String? backNineWinner;
+    String? fullEighteenWinner;
+    // set frontNineWinner if every index in matchPlayResults is not empty
+    if (matchPlayResults.every((element) => element != null)) {
+      int frontNineWinnerScore = matchPlayResults[8];
+      if (frontNineWinnerScore < 0) {
+        frontNineWinner = teamNames[0];
+      } else if (frontNineWinnerScore > 0) {
+        frontNineWinner = teamNames[1];
+      } else {
+        frontNineWinner = 'Tie';
+      }
+      // the back nine winner score is the difference between the 18th hole and the 9th hole
+      int backNineWinnerScore = matchPlayResults[17] - matchPlayResults[8];
+      if (matchPlayResults[17] < 0) {
+        backNineWinner = teamNames[0];
+      } else if (backNineWinnerScore > 0) {
+        backNineWinner = teamNames[1];
+      } else {
+        backNineWinner = 'Tie';
+      }
+      int fullEighteenWinnerScore = matchPlayResults[17];
+      if (fullEighteenWinnerScore < 0) {
+        fullEighteenWinner = teamNames[0];
+      } else if (fullEighteenWinnerScore > 0) {
+        fullEighteenWinner = teamNames[1];
+      } else {
+        fullEighteenWinner = 'Tie';
+      }
+    }
 
     return Row(
       children: [
@@ -111,13 +143,39 @@ class TeamMatchPlayResultsRow extends StatelessWidget {
           height: 80 * scaleFactor,
           margin: EdgeInsets.all(2 * scaleFactor),
           decoration: const BoxDecoration(
-            color: Colors.transparent,
+            color: Colors.white,
             borderRadius: BorderRadius.only(
               topRight: Radius.circular(12),
               bottomRight: Radius.circular(12),
             ),
           ),
-          child: const Column(),
+          child: Column(
+            children: [
+              Spacer(),
+              Text(
+                'Front: ${frontNineWinner ?? ''}',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 15,
+                ),
+              ),
+              Text(
+                'Back: ${backNineWinner ?? ''}',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 15,
+                ),
+              ),
+              Text(
+                'Full 18: ${fullEighteenWinner ?? ''}',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 15,
+                ),
+              ),
+              const Spacer(),
+            ],
+          ),
         ),
       ],
     );

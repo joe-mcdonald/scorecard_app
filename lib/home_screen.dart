@@ -887,7 +887,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     int playerHandicap = await dbHelper.getHandicap(playerIndex) ?? 0;
-    int lowestHandicap = 0;
+    int lowestHandicap = 999;
     for (int i = 0; i < 4; i++) {
       int handicap = await dbHelper.getHandicap(i) ?? 0;
       if (handicap < lowestHandicap) {
@@ -926,11 +926,11 @@ class _HomeScreenState extends State<HomeScreen> {
     if (matchPlayMode) {
       int playerCount = Provider.of<CourseDataProvider>(context).playerCount;
       if (teamMatchPlayMode) {
-        if (matchPlayFormat == 'Four Ball') {
-          await _calculateTeamMatchPlayFourBall();
-        } else if (matchPlayFormat == 'Alternate Shot') {
-          await _calculateTeamMatchPlayAlternateShot();
-        }
+        // if (matchPlayFormat == 'Four Ball') {
+        await _calculateTeamMatchPlayFourBall();
+        // } else if (matchPlayFormat == 'Alternate Shot') {
+        //   await _calculateTeamMatchPlayAlternateShot();
+        // }
       } else {
         if (playerCount == 2 || playerCount == 3 || playerCount == 4) {
           await _calculateMatchPlay12();

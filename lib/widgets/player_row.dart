@@ -423,14 +423,6 @@ class _PlayerRowState extends State<PlayerRow> {
       ],
     );
   }
-
-//   @override
-//   void dispose() {
-//     for (var focusNode in widget.focusNodes) {
-//       focusNode.dispose();
-//     }
-//     super.dispose();
-//   }
 }
 
 class _ShapePainter extends CustomPainter {

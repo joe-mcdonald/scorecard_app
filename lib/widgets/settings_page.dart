@@ -72,23 +72,6 @@ class _SettingsPageState extends State<SettingsPage> {
     await prefs.setString('matchPlayFormat', matchPlayFormatValue);
   }
 
-  // Future<void> _saveSettings(
-  // bool showFairwayGreenValue,
-  // bool showPuttsPerHoleValue,
-  // bool mensHandicapValue,
-  // bool matchPlayModeValue,
-  // bool teamMatchPlayModeValue,
-  // String matchPlayFormatValue,
-  // ) async {
-  // final prefs = await SharedPreferences.getInstance();
-  // await prefs.setBool('showFairwayGreen', showFairwayGreenValue);
-  // await prefs.setBool('showPuttsPerHole', showPuttsPerHoleValue);
-  // await prefs.setBool('mensHandicap', mensHandicapValue);
-  // await prefs.setBool('matchPlayMode', matchPlayModeValue);
-  // await prefs.setBool('teamMatchPlayMode', teamMatchPlayModeValue);
-  // await prefs.setString('matchPlayFormat', matchPlayFormatValue);
-  // }
-
   void _showPopup() {
     final overlay = Overlay.of(context).context.findRenderObject();
     final overlayBox = overlay as RenderBox;
@@ -153,6 +136,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
         body: CupertinoFormSection.insetGrouped(
+          backgroundColor: const Color.fromRGBO(225, 225, 225, 1),
           children: [
             CupertinoFormRow(
               child: Row(
@@ -195,65 +179,82 @@ class _SettingsPageState extends State<SettingsPage> {
                   ],
                 ),
               ),
-            if (matchPlayMode)
-              CupertinoFormRow(
-                padding: EdgeInsets.zero,
-                child: Row(
-                  children: [
-                    const SizedBox(width: 19),
-                    const Text(
-                      'Match Play Format',
-                      style: TextStyle(fontSize: 20),
-                    ),
-                    const Spacer(),
-                    CupertinoButton(
-                      child: matchPlayFormat.isEmpty
-                          ? const Text('    ',
-                              style:
-                                  TextStyle(fontSize: 20, color: Colors.black))
-                          : AutoSizeText(
-                              matchPlayFormat,
-                              style: const TextStyle(color: Colors.black),
-                              maxFontSize: 20,
-                            ),
-                      onPressed: () => showCupertinoModalPopup<void>(
-                        context: context,
-                        builder: (BuildContext context) => CupertinoActionSheet(
-                          // title: const Text('Title'),
-                          // message: const Text('Message'),
-                          actions: <CupertinoActionSheetAction>[
-                            CupertinoActionSheetAction(
-                              // isDefaultAction: true,
-                              onPressed: () {
-                                matchPlayFormat = 'Four Ball';
-                                setState(() {
-                                  _saveMatchPlayFormat(matchPlayFormat);
-                                });
-                                Navigator.pop(context);
-                              },
-                              child: const Text('Four Ball',
-                                  style: TextStyle(
-                                      fontSize: 20, color: Colors.black)),
-                            ),
-                            CupertinoActionSheetAction(
-                              onPressed: () {
-                                matchPlayFormat = 'Alternate Shot';
-                                setState(() {
-                                  _saveMatchPlayFormat(matchPlayFormat);
-                                });
-                                Navigator.pop(context);
-                              },
-                              child: const Text('Alternate Shot',
-                                  style: TextStyle(
-                                      fontSize: 20, color: Colors.black)),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            // if (matchPlayMode)
+            //   CupertinoFormRow(
+            //     padding: EdgeInsets.zero,
+            //     child: Row(
+            //       children: [
+            //         const SizedBox(width: 19),
+            //         const Text(
+            //           'Match Play Format',
+            //           style: TextStyle(
+            //             fontSize: 20,
+            //             overflow: TextOverflow.ellipsis,
+            //           ),
+            //         ),
+            //         const Spacer(),
+            //         CupertinoButton(
+            //           child: matchPlayFormat.isEmpty
+            //               ? const Text(
+            //                   '    ',
+            //                   style: TextStyle(
+            //                     fontSize: 20,
+            //                     color: Colors.black,
+            //                   ),
+            //                 )
+            //               : AutoSizeText(
+            //                   matchPlayFormat,
+            //                   style: const TextStyle(
+            //                     color: Colors.black,
+            //                   ),
+            //                   maxFontSize: 20,
+            //                   overflow: TextOverflow.ellipsis,
+            //                 ),
+            //           onPressed: () => showCupertinoModalPopup<void>(
+            //             context: context,
+            //             builder: (BuildContext context) => CupertinoActionSheet(
+            //               actions: <CupertinoActionSheetAction>[
+            //                 CupertinoActionSheetAction(
+            //                   onPressed: () {
+            //                     matchPlayFormat = 'Four Ball';
+            //                     setState(() {
+            //                       _saveMatchPlayFormat(matchPlayFormat);
+            //                     });
+            //                     Navigator.pop(context);
+            //                   },
+            //                   child: const Text(
+            //                     'Four Ball',
+            //                     style: TextStyle(
+            //                       fontSize: 20,
+            //                       color: Colors.black,
+            //                       overflow: TextOverflow.ellipsis,
+            //                     ),
+            //                   ),
+            //                 ),
+            //                 CupertinoActionSheetAction(
+            //                   onPressed: () {
+            //                     matchPlayFormat = 'Alternate Shot';
+            //                     setState(() {
+            //                       _saveMatchPlayFormat(matchPlayFormat);
+            //                     });
+            //                     Navigator.pop(context);
+            //                   },
+            //                   child: const Text(
+            //                     'Alternate Shot',
+            //                     style: TextStyle(
+            //                       fontSize: 15,
+            //                       color: Colors.black,
+            //                       overflow: TextOverflow.ellipsis,
+            //                     ),
+            //                   ),
+            //                 ),
+            //               ],
+            //             ),
+            //           ),
+            //         ),
+            //       ],
+            //     ),
+            //   ),
             CupertinoFormRow(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -283,11 +284,9 @@ class _SettingsPageState extends State<SettingsPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  GestureDetector(
-                    child: const Text(
-                      'Show Putts Per Hole',
-                      style: TextStyle(fontSize: 20),
-                    ),
+                  const Text(
+                    'Show Putts Per Hole',
+                    style: TextStyle(fontSize: 20),
                   ),
                   CupertinoSwitch(
                     value: showPuttsPerHole,
@@ -305,17 +304,14 @@ class _SettingsPageState extends State<SettingsPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  GestureDetector(
-                    child: const Text(
-                      'Mens Handicap',
-                      style: TextStyle(fontSize: 20),
-                    ),
+                  const Text(
+                    'Mens Handicap',
+                    style: TextStyle(fontSize: 20),
                   ),
                   CupertinoSwitch(
                     value: showMensHandicap,
-                    // activeColor: CupertinoColors.lightBackgroundGray,
                     onChanged: (bool showMensHandicapValue) {
-                      showMensHandicapValue = showMensHandicapValue;
+                      showMensHandicap = showMensHandicapValue;
                       setState(() {
                         _saveMensHandicap(showMensHandicapValue);
                       });
