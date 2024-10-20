@@ -8,8 +8,11 @@ import 'package:scorecard_app/scale_factor_provider.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp])
-      .then((_) async {
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
+    DeviceOrientation.portraitUp
+  ]).then((_) async {
     await DatabaseHelper().database; // Initialize database
     runApp(
       MultiProvider(

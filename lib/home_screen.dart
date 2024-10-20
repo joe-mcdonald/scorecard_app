@@ -153,7 +153,9 @@ class _HomeScreenState extends State<HomeScreen> {
     List<List<dynamic>> csvData = const CsvToListConverter().convert(rawData);
     // setState(() {
     mensHcap = csvData[3].sublist(1).map((e) => e as int).toList();
-    womensHcap = csvData[4].sublist(1).map((e) => e as int).toList();
+    // womensHcap = csvData[4].sublist(1).map((e) => e as int).toList(); // temp remove
+    womensHcap = csvData[3].sublist(1).map((e) => e as int).toList();
+
     tees = csvData.map((row) => row[0].toString()).skip(5).toList();
     for (var row in csvData.skip(5)) {
       String teeName = row[0];
@@ -172,7 +174,8 @@ class _HomeScreenState extends State<HomeScreen> {
             .updateCourseData(
           newPar: pars[selectedTee]!,
           newMensHcap: mensHcap,
-          newWomensHcap: womensHcap,
+          // newWomensHcap: womensHcap,
+          newWomensHcap: mensHcap,
         );
       }
     });
@@ -295,37 +298,47 @@ class _HomeScreenState extends State<HomeScreen> {
       String? playerName = await dbHelper.getPlayerName(playerIndex) ??
           'Player ${playerIndex + 1}';
       int totalScore = 0;
+      int frontScore = 0;
+      int backScore = 0;
       for (int holeIndex = 0; holeIndex < 18; holeIndex++) {
         int score = await dbHelper.getScoreForHole(playerIndex, holeIndex);
+        if (holeIndex >= 0 && holeIndex <= 8) {
+          frontScore += score;
+        }
+        if (holeIndex >= 9 && holeIndex <= 17) {
+          backScore += score;
+        }
         totalScore += score;
       }
       // String scoresString =
       //     scores.map((score) => score == 0 ? '' : score.toString()).join(', ');
 
       details.writeln('Player: $playerName');
+      details.writeln('Front: $frontScore');
+      details.writeln('Back: $backScore');
       details.writeln('Score: $totalScore');
       details.writeln('');
     }
 
-    if (showPutterRow) {
-      int totalPutts = 0;
-      for (int holeIndex = 0; holeIndex < 18; holeIndex++) {
-        totalPutts += await dbHelper.getPuttsForHole(holeIndex);
-      }
-      details.writeln('Putts: $totalPutts');
-      details.writeln('');
-    }
+    // if (showPutterRow) {
+    //   int totalPutts = 0;
+    //   for (int holeIndex = 0; holeIndex < 18; holeIndex++) {
+    //     totalPutts += await dbHelper.getPuttsForHole(holeIndex);
+    //   }
+    //   details.writeln('Putts: $totalPutts');
+    //   details.writeln('');
+    // }
 
     // print(details.toString());
     return details.toString();
   }
 
   bool isHandicapHole(int index, int handicapDifference) {
-    if (mensHandicap) {
-      return mensHcap[index] <= handicapDifference.abs();
-    } else {
-      return womensHcap[index] <= handicapDifference.abs();
-    }
+    // if (mensHandicap) {
+    return mensHcap[index] <= handicapDifference.abs();
+    // } else {
+    //   return womensHcap[index] <= handicapDifference.abs();
+    // }
   }
 
   Future<void> _loadSettings() async {
@@ -334,7 +347,8 @@ class _HomeScreenState extends State<HomeScreen> {
     matchPlayMode = prefs.getBool('matchPlayMode') ?? false;
     showFairwayGreen = prefs.getBool('showFairwayGreen') ?? false;
     showPutterRow = prefs.getBool('showPuttsPerHole') ?? false;
-    mensHandicap = prefs.getBool('mensHandicap') ?? false;
+    // mensHandicap = prefs.getBool('mensHandicap') ?? false;
+    mensHandicap = true;
     teamMatchPlayMode = prefs.getBool('teamMatchPlayMode') ?? true;
     matchPlayFormat = prefs.getString('matchPlayFormat') ?? 'Four Ball';
     // });
@@ -370,11 +384,11 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       bool isHandicapHole = false;
-      if (mensHandicap) {
-        isHandicapHole = mensHcap[i] <= netStrokes.abs();
-      } else {
-        isHandicapHole = womensHcap[i] <= netStrokes;
-      }
+      // if (mensHandicap) {
+      isHandicapHole = mensHcap[i] <= netStrokes.abs();
+      // } else {
+      //   isHandicapHole = womensHcap[i] <= netStrokes;
+      // }
 
       if (player1Score != 0 && player2Score != 0) {
         if (isHandicapHole) {
@@ -521,9 +535,11 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      final isHandicapHole = mensHandicap
-          ? mensHcap[i] <= netStrokes.abs()
-          : womensHcap[i] <= netStrokes;
+      // final isHandicapHole = mensHandicap
+      //     ? mensHcap[i] <= netStrokes.abs()
+      //     : womensHcap[i] <= netStrokes;
+
+      final isHandicapHole = mensHcap[i] <= netStrokes.abs();
 
       // ignore: unrelated_type_equality_checks
       if (player3Score != 0 && player4Score != 0) {
@@ -812,7 +828,8 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       // Determine if the current hole is a handicap hole
-      final isHandicapHole = mensHandicap ? mensHcap[i] : womensHcap[i];
+      // final isHandicapHole = mensHandicap ? mensHcap[i] : womensHcap[i];
+      final isHandicapHole = mensHcap[i];
 
       // Calculate the net scores considering the alternate shot format
       final netScoreTeam1 = (i % 2 == 0)
@@ -866,21 +883,21 @@ class _HomeScreenState extends State<HomeScreen> {
         int player1Handicap = await dbHelper.getHandicap(0) ?? 0;
         int player2Handicap = await dbHelper.getHandicap(1) ?? 0;
         int handicapDifference = player1Handicap - player2Handicap;
-        if (mensHandicap) {
-          return mensHcap[hole] <= handicapDifference;
-        } else {
-          return womensHcap[hole] <= handicapDifference;
-        }
+        // if (mensHandicap) {
+        return mensHcap[hole] <= handicapDifference;
+        // } else {
+        //   return womensHcap[hole] <= handicapDifference;
+        // }
       } else if (playerIndex == 1) {
         // if player 2
         int player1Handicap = await dbHelper.getHandicap(0) ?? 0;
         int player2Handicap = await dbHelper.getHandicap(1) ?? 0;
         int handicapDifference = player2Handicap - player1Handicap;
-        if (mensHandicap) {
-          return mensHcap[hole] <= handicapDifference;
-        } else {
-          return womensHcap[hole] <= handicapDifference;
-        }
+        // if (mensHandicap) {
+        return mensHcap[hole] <= handicapDifference;
+        // } else {
+        //   return womensHcap[hole] <= handicapDifference;
+        // }
       } else {
         return false; // if there are 3 players, the 3rd player isnt involved so return false
       }
@@ -895,11 +912,11 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
     int handicapDifference = playerHandicap - lowestHandicap;
-    if (mensHandicap) {
-      return mensHcap[hole] <= handicapDifference.abs();
-    } else {
-      return womensHcap[hole] <= handicapDifference.abs();
-    }
+    // if (mensHandicap) {
+    return mensHcap[hole] <= handicapDifference.abs();
+    // } else {
+    //   return womensHcap[hole] <= handicapDifference.abs();
+    // }
   }
 
   void _toggleFairway(int index) {

@@ -83,7 +83,7 @@ class _CourseActionSheetState extends State<CourseActionSheet> {
 
   void _requestCourse() async {
     const phoneNumber = '6048087500';
-    const message = 'I would like to request a course: ';
+    const message = 'I would like to request a course:';
 
     final Uri smsUri = Uri(
       scheme: 'sms',
@@ -129,6 +129,10 @@ class _CourseActionSheetState extends State<CourseActionSheet> {
             style: TextStyle(fontSize: 20, color: CupertinoColors.systemGrey)),
         actions: [
           _buildAction(
+              'baileyranchgc', 'Bailey Ranch Golf Club', 'Owasso, Oklahoma'),
+          _buildAction('bandondunes', 'Bandon Dunes', 'Bandon, Oregon'),
+          _buildAction('bandontrails', 'Bandon Trails', 'Bandon, Oregon'),
+          _buildAction(
               'beachgrovegolfclub', 'Beach Grove Golf Club', 'Tsawwassen, BC'),
           _buildAction('bigskygolfclub', 'Big Sky Golf Club', 'Pemberton, BC'),
           _buildAction('calclub', 'Cal Club', 'San Francisco, CA'),
@@ -148,12 +152,15 @@ class _CourseActionSheetState extends State<CourseActionSheet> {
               'musqueamgolfcourse', 'Musqueam Golf Course', 'Vancouver, BC'),
           _buildAction('nicklausnorthgolfclub', 'Nicklaus North Golf Club',
               'Whistler, BC'),
+          _buildAction('oldmacdonald', 'Old MacDonald', 'Bandon, Oregon'),
+          _buildAction('pacificdunes', 'Pacific Dunes', 'Bandon, Oregon'),
           _buildAction('pheasantglengolfresort', 'Pheasant Glen Golf Resort',
               'Nanaimo, BC'),
           _buildAction('pointgreyg&cc', 'Point Grey G&CC', 'Vancouver, BC'),
           _buildAction(
               'royalcolwoodgolfclub', 'Royal Colwood Golf Club', 'Colwood, BC'),
           _buildAction('shaughnessyg&cc', 'Shaughnessy G&CC', 'Vancouver, BC'),
+          _buildAction('sheepranch', 'Sheep Ranch', 'Bandon, Oregon'),
           _buildAction(
               'universitygolfclub', 'University Golf Club', 'Vancouver, BC'),
           _buildAction(

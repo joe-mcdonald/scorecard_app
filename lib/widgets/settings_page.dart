@@ -300,26 +300,26 @@ class _SettingsPageState extends State<SettingsPage> {
                 ],
               ),
             ),
-            CupertinoFormRow(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Mens Handicap',
-                    style: TextStyle(fontSize: 20),
-                  ),
-                  CupertinoSwitch(
-                    value: showMensHandicap,
-                    onChanged: (bool showMensHandicapValue) {
-                      showMensHandicap = showMensHandicapValue;
-                      setState(() {
-                        _saveMensHandicap(showMensHandicapValue);
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ),
+            // CupertinoFormRow(
+            //   child: Row(
+            //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            //     children: [
+            //       const Text(
+            //         'Mens Handicap',
+            //         style: TextStyle(fontSize: 20),
+            //       ),
+            //       CupertinoSwitch(
+            //         value: showMensHandicap,
+            //         onChanged: (bool showMensHandicapValue) {
+            //           showMensHandicap = showMensHandicapValue;
+            //           setState(() {
+            //             _saveMensHandicap(showMensHandicapValue);
+            //           });
+            //         },
+            //       ),
+            //     ],
+            //   ),
+            // ),
             CupertinoFormRow(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
