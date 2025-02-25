@@ -71,12 +71,12 @@ class MatchPlayResultsRow extends StatelessWidget {
                       Text(
                         matchPlayResults[index].abs().toString(),
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: matchPlayResults[index] < 0
-                              ? Colors.red
-                              : matchPlayResults[index] > 0
-                                  ? const Color.fromARGB(198, 0, 0, 255)
-                                  : Colors.black,
+                        style: const TextStyle(
+                          // color: matchPlayResults[index] < 0
+                          //     ? Colors.red
+                          //     : matchPlayResults[index] > 0
+                          //         ? const Color.fromARGB(198, 0, 0, 255)
+                          //         : Colors.black,
                           fontSize: 35,
                           fontWeight: FontWeight.bold,
                         ),
@@ -92,12 +92,12 @@ class MatchPlayResultsRow extends StatelessWidget {
                                     : playerNames[1]
                                 : 'Tie',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: matchPlayResults[index] < 0
-                              ? Colors.red
-                              : matchPlayResults[index] > 0
-                                  ? const Color.fromARGB(198, 0, 0, 255)
-                                  : Colors.black,
+                        style: const TextStyle(
+                          // color: matchPlayResults[index] < 0
+                          //     ? Colors.red
+                          //     : matchPlayResults[index] > 0
+                          //         ? const Color.fromARGB(198, 0, 0, 255)
+                          //         : Colors.black,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
