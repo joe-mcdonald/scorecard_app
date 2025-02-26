@@ -7,6 +7,7 @@ class MatchPlayPressRow extends StatelessWidget {
   final List<int> pressResults;
   final List<String> playerNames;
   final String pressLabel;
+  final Function(int)? onLongPress; //callback function
 
   const MatchPlayPressRow({
     super.key,
@@ -14,6 +15,7 @@ class MatchPlayPressRow extends StatelessWidget {
     required this.pressResults,
     required this.playerNames,
     required this.pressLabel,
+    this.onLongPress,
   });
 
   @override
@@ -24,33 +26,41 @@ class MatchPlayPressRow extends StatelessWidget {
     return Row(
       children: [
         SizedBox(width: startHole * 104 * scaleFactor),
-        Container(
-          padding: EdgeInsets.only(right: 0 * scaleFactor),
-          margin: EdgeInsets.all(2 * scaleFactor),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topRight: Radius.circular(12),
-              bottomRight: Radius.circular(12),
-              topLeft: Radius.circular(12),
-              bottomLeft: Radius.circular(12),
+        GestureDetector(
+          onLongPress: () {
+            if (onLongPress != null && startHole != 0) {
+              onLongPress!(startHole);
+            }
+          },
+          child: Container(
+            padding: EdgeInsets.only(right: 0 * scaleFactor),
+            margin: EdgeInsets.all(2 * scaleFactor),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topRight: Radius.circular(12),
+                bottomRight: Radius.circular(12),
+                topLeft: Radius.circular(12),
+                bottomLeft: Radius.circular(12),
+              ),
             ),
-          ),
-          child: Center(
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 80 * scaleFactor,
-                  height: scaleFactor * 70,
-                  child: Center(
-                    child: Text(
-                      'Press   $pressLabel',
-                      style: const TextStyle(color: Colors.black, fontSize: 23),
-                      textAlign: TextAlign.center,
+            child: Center(
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 80 * scaleFactor,
+                    height: scaleFactor * 70,
+                    child: Center(
+                      child: Text(
+                        'Press   $pressLabel',
+                        style:
+                            const TextStyle(color: Colors.black, fontSize: 23),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

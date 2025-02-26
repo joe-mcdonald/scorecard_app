@@ -77,59 +77,51 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<int> pressStartHoles = [];
   List<List<int>> pressMatchPlayResults = [];
-  Map<int, List<int>> presses = {}; // Stores number of active presses
+  Map<int, List<int>> presses = {};
 
   Future<void> _startPress(int holeIndex) async {
+    final prefs = await SharedPreferences.getInstance();
+
     if (!presses.containsKey(holeIndex)) {
       setState(() {
-        presses[holeIndex] = List.generate(18 - holeIndex, (index) => 0);
+        presses[holeIndex] =
+            _calculatePressMatchPlay(holeIndex, teamMatchPlayMode);
       });
+
+      // Save updated presses list to SharedPreferences
+      await prefs.setStringList(
+          'presses', presses.keys.map((e) => e.toString()).toList());
     }
   }
 
   Future<void> _loadPressData() async {
     final prefs = await SharedPreferences.getInstance();
-    List<String>? savedPresses = prefs.getStringList('pressStartHoles');
+    final storedPresses = prefs.getStringList('presses') ?? [];
 
-    if (savedPresses != null) {
-      pressStartHoles = savedPresses.map(int.parse).toList();
-      pressMatchPlayResults = List.generate(
-        pressStartHoles.length,
-        (index) => List.generate(18, (index) => 0),
-      );
-
-      setState(() {});
-    }
+    setState(() {
+      presses.clear();
+      for (String hole in storedPresses) {
+        int startHole = int.parse(hole);
+        presses[startHole] =
+            _calculatePressMatchPlay(startHole, teamMatchPlayMode);
+      }
+    });
   }
 
-  void _removePress(int index) async {
+  void _removePress(int startHole) async {
     final prefs = await SharedPreferences.getInstance();
 
-    pressStartHoles.removeAt(index);
-    pressMatchPlayResults.removeAt(index);
+    setState(() {
+      presses.remove(startHole);
+    });
 
+    // Save the updated presses list to SharedPreferences
     await prefs.setStringList(
-      'pressStartHoles',
-      pressStartHoles.map((h) => h.toString()).toList(),
-    );
-
-    setState(() {});
-  }
-
-  Future<void> _loadMatchPlayData() async {
-    final prefs = await SharedPreferences.getInstance();
-    final storedPresses = prefs.getString('presses');
-
-    if (storedPresses != null) {
-      setState(() {
-        presses = Map<int, List<int>>.from(jsonDecode(storedPresses));
-      });
-    }
+        'presses', presses.keys.map((e) => e.toString()).toList());
   }
 
   // List<int> _calculatePressMatchPlay(int startHole) {
   //   List<int> pressResults = List.filled(18 - startHole, 0);
-
   //   for (int i = startHole; i < 18; i++) {
   //     if (matchPlayResultsPair1[i] < 0) {
   //       pressResults[i - startHole] =
@@ -142,19 +134,21 @@ class _HomeScreenState extends State<HomeScreen> {
   //           (i == startHole) ? 0 : pressResults[i - startHole - 1];
   //     }
   //   }
-
   //   return pressResults;
   // }
 
-  List<int> _calculatePressMatchPlay(int startHole) {
+  List<int> _calculatePressMatchPlay(int startHole, bool? teamFormat) {
     List<int> pressResults = List.generate(18, (index) => 0); // Initialize
 
     for (int i = startHole; i < 18; i++) {
       final prevPressScore = (i == startHole) ? 0 : pressResults[i - 1];
 
-      // Use the **already calculated** match play results
-      final holeResult =
-          matchPlayResultsPair1[i] - matchPlayResultsPair1[i - 1];
+      final holeResult;
+      if (teamFormat == true) {
+        holeResult = matchPlayResults[i] - matchPlayResults[i - 1];
+      } else {
+        holeResult = matchPlayResultsPair1[i] - matchPlayResultsPair1[i - 1];
+      }
 
       if (holeResult < 0) {
         pressResults[i] = prevPressScore - 1; // Player 1 wins the hole in press
@@ -327,6 +321,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _resetValues() async {
+    final prefs = await SharedPreferences.getInstance();
     setState(() {
       // Clear the list of player controllers and scores except for the first player
       playersControllers.removeRange(1, playersControllers.length);
@@ -356,6 +351,8 @@ class _HomeScreenState extends State<HomeScreen> {
       // Update course and tee selection
       selectedTee = tees.isNotEmpty ? tees[0] : 'Whites';
       selectedCourse = ''; // or the default course
+
+      presses.clear();
     });
 
     // Clear the database
@@ -375,6 +372,8 @@ class _HomeScreenState extends State<HomeScreen> {
     // Save the updated state
     // _saveScores();
     // _saveState();
+
+    await prefs.remove('presses');
   }
 
   Future<void> _shareRoundDetails() async {
@@ -610,7 +609,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (presses.isNotEmpty) {
       for (int startHole in pressStartHoles) {
         pressMatchPlayResults[pressStartHoles.indexOf(startHole)] =
-            _calculatePressMatchPlay(startHole);
+            _calculatePressMatchPlay(startHole, false);
       }
     }
     setState(() {});
@@ -1348,9 +1347,28 @@ class _HomeScreenState extends State<HomeScreen> {
                                     team2Name =
                                         '${playerNames[2]!.substring(0, 1)}+${playerNames[3]!.substring(0, 1)}';
                                   }
-                                  return TeamMatchPlayResultsRow(
-                                    matchPlayResults: matchPlayResults,
-                                    teamNames: [team1Name, team2Name],
+                                  return Column(
+                                    children: [
+                                      TeamMatchPlayResultsRow(
+                                        matchPlayResults: matchPlayResults,
+                                        teamNames: [team1Name, team2Name],
+                                        onLongPress: _startPress,
+                                      ),
+                                      for (var entry in presses
+                                          .entries) //TODO: found match play press here
+                                        MatchPlayPressRow(
+                                          startHole: entry.key,
+                                          pressResults:
+                                              _calculatePressMatchPlay(
+                                                  entry.key, true),
+                                          playerNames: [
+                                            team1Name ?? 'Team 1',
+                                            team2Name ?? 'Team 2',
+                                          ],
+                                          pressLabel: '${entry.key + 1}',
+                                          onLongPress: _removePress,
+                                        ),
+                                    ],
                                   );
                                 }
                               },
@@ -1518,12 +1536,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                           startHole: entry.key,
                                           pressResults:
                                               _calculatePressMatchPlay(
-                                                  entry.key),
+                                                  entry.key, false),
                                           playerNames: [
                                             playerNames[0] ?? 'Player 1',
                                             playerNames[1] ?? 'Player 2',
                                           ],
                                           pressLabel: '${entry.key + 1}',
+                                          onLongPress: _removePress,
                                         ),
                                     ],
                                   );
