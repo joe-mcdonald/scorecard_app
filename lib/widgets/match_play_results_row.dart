@@ -5,18 +5,23 @@ import 'package:scorecard_app/scale_factor_provider.dart';
 class MatchPlayResultsRow extends StatelessWidget {
   final List<int> matchPlayResults;
   final List<String> playerNames;
+  final Function(int)? onLongPress; //callback function
 
-  const MatchPlayResultsRow(
-      {super.key, required this.matchPlayResults, required this.playerNames});
+  const MatchPlayResultsRow({
+    super.key,
+    required this.matchPlayResults,
+    required this.playerNames,
+    this.onLongPress,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final scaleFactor = Provider.of<ScaleFactorProvider>(context).scaleFactor;
+    final scaleFactor =
+        Provider.of<ScaleFactorProvider>(context, listen: false).scaleFactor;
 
     return Row(
       children: [
         Container(
-          // width: 80 * scaleFactor,
           padding: EdgeInsets.only(right: 0 * scaleFactor),
           margin: EdgeInsets.all(2 * scaleFactor),
           decoration: const BoxDecoration(
@@ -39,7 +44,6 @@ class MatchPlayResultsRow extends StatelessWidget {
                       'Match\nPlay',
                       style: TextStyle(color: Colors.black, fontSize: 23),
                       textAlign: TextAlign.center,
-                      // textScaler: TextScaler.linear(scaleFactor),
                     ),
                   ),
                 ),
@@ -48,61 +52,68 @@ class MatchPlayResultsRow extends StatelessWidget {
           ),
         ),
         ...List.generate(18, (index) {
-          return Container(
-            width: 100 * scaleFactor,
-            height: 80 * scaleFactor,
-            margin: EdgeInsets.all(2 * scaleFactor),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
-                bottomLeft:
-                    index == 0 ? const Radius.circular(12) : Radius.zero,
+          return GestureDetector(
+            onLongPress: () {
+              if (onLongPress != null && index != 0) {
+                onLongPress!(index);
+              }
+            },
+            child: Container(
+              width: 100 * scaleFactor,
+              height: 80 * scaleFactor,
+              margin: EdgeInsets.all(2 * scaleFactor),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
+                  bottomLeft:
+                      index == 0 ? const Radius.circular(12) : Radius.zero,
+                ),
               ),
-            ),
-            child: Center(
-              child: SizedBox(
-                width: double.infinity,
-                height: double.infinity,
-                child: Center(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 5),
-                      Text(
-                        matchPlayResults[index].abs().toString(),
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          // color: matchPlayResults[index] < 0
-                          //     ? Colors.red
-                          //     : matchPlayResults[index] > 0
-                          //         ? const Color.fromARGB(198, 0, 0, 255)
-                          //         : Colors.black,
-                          fontSize: 35,
-                          fontWeight: FontWeight.bold,
+              child: Center(
+                child: SizedBox(
+                  width: double.infinity,
+                  height: double.infinity,
+                  child: Center(
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 4),
+                        Text(
+                          matchPlayResults[index].abs().toString(),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            // color: matchPlayResults[index] < 0
+                            //     ? Colors.red
+                            //     : matchPlayResults[index] > 0
+                            //         ? const Color.fromARGB(198, 0, 0, 255)
+                            //         : Colors.black,
+                            fontSize: 35,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      Text(
-                        matchPlayResults[index] < 0
-                            ? playerNames[0] == ''
-                                ? 'Player 1'
-                                : playerNames[0]
-                            : matchPlayResults[index] > 0
-                                ? playerNames[1] == ''
-                                    ? 'Player 2'
-                                    : playerNames[1]
-                                : 'Tie',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          // color: matchPlayResults[index] < 0
-                          //     ? Colors.red
-                          //     : matchPlayResults[index] > 0
-                          //         ? const Color.fromARGB(198, 0, 0, 255)
-                          //         : Colors.black,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                        Text(
+                          matchPlayResults[index] < 0
+                              ? playerNames[0] == ''
+                                  ? 'Player 1'
+                                  : playerNames[0]
+                              : matchPlayResults[index] > 0
+                                  ? playerNames[1] == ''
+                                      ? 'Player 2'
+                                      : playerNames[1]
+                                  : 'Tie',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            // color: matchPlayResults[index] < 0
+                            //     ? Colors.red
+                            //     : matchPlayResults[index] > 0
+                            //         ? const Color.fromARGB(198, 0, 0, 255)
+                            //         : Colors.black,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

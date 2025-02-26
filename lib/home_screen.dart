@@ -2,6 +2,7 @@
 // ignore_for_file: no_leading_underscores_for_local_identifiers
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:csv/csv.dart';
@@ -12,6 +13,7 @@ import 'package:provider/provider.dart';
 import 'package:scorecard_app/course_data_provider.dart';
 import 'package:scorecard_app/scale_factor_provider.dart';
 import 'package:scorecard_app/widgets/course_action_sheet.dart';
+import 'package:scorecard_app/widgets/match_play_press_row.dart';
 import 'package:scorecard_app/widgets/match_play_results_row.dart';
 import 'package:scorecard_app/widgets/player_row.dart';
 import 'package:scorecard_app/widgets/putts_row.dart';
@@ -73,6 +75,101 @@ class _HomeScreenState extends State<HomeScreen> {
   List<int> matchPlayResultsPair1 = List.generate(18, (index) => 0);
   List<int> matchPlayResultsPair2 = List.generate(18, (index) => 0);
 
+  List<int> pressStartHoles = [];
+  List<List<int>> pressMatchPlayResults = [];
+  Map<int, List<int>> presses = {}; // Stores number of active presses
+
+  Future<void> _startPress(int holeIndex) async {
+    if (!presses.containsKey(holeIndex)) {
+      setState(() {
+        presses[holeIndex] = List.generate(18 - holeIndex, (index) => 0);
+      });
+    }
+  }
+
+  Future<void> _loadPressData() async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String>? savedPresses = prefs.getStringList('pressStartHoles');
+
+    if (savedPresses != null) {
+      pressStartHoles = savedPresses.map(int.parse).toList();
+      pressMatchPlayResults = List.generate(
+        pressStartHoles.length,
+        (index) => List.generate(18, (index) => 0),
+      );
+
+      setState(() {});
+    }
+  }
+
+  void _removePress(int index) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    pressStartHoles.removeAt(index);
+    pressMatchPlayResults.removeAt(index);
+
+    await prefs.setStringList(
+      'pressStartHoles',
+      pressStartHoles.map((h) => h.toString()).toList(),
+    );
+
+    setState(() {});
+  }
+
+  Future<void> _loadMatchPlayData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final storedPresses = prefs.getString('presses');
+
+    if (storedPresses != null) {
+      setState(() {
+        presses = Map<int, List<int>>.from(jsonDecode(storedPresses));
+      });
+    }
+  }
+
+  // List<int> _calculatePressMatchPlay(int startHole) {
+  //   List<int> pressResults = List.filled(18 - startHole, 0);
+
+  //   for (int i = startHole; i < 18; i++) {
+  //     if (matchPlayResultsPair1[i] < 0) {
+  //       pressResults[i - startHole] =
+  //           (i == startHole) ? -1 : pressResults[i - startHole - 1] - 1;
+  //     } else if (matchPlayResultsPair1[i] > 0) {
+  //       pressResults[i - startHole] =
+  //           (i == startHole) ? 1 : pressResults[i - startHole - 1] + 1;
+  //     } else {
+  //       pressResults[i - startHole] =
+  //           (i == startHole) ? 0 : pressResults[i - startHole - 1];
+  //     }
+  //   }
+
+  //   return pressResults;
+  // }
+
+  List<int> _calculatePressMatchPlay(int startHole) {
+    List<int> pressResults = List.generate(18, (index) => 0); // Initialize
+
+    for (int i = startHole; i < 18; i++) {
+      final prevPressScore = (i == startHole) ? 0 : pressResults[i - 1];
+
+      // Use the **already calculated** match play results
+      final holeResult =
+          matchPlayResultsPair1[i] - matchPlayResultsPair1[i - 1];
+
+      if (holeResult < 0) {
+        pressResults[i] = prevPressScore - 1; // Player 1 wins the hole in press
+      } else if (holeResult > 0) {
+        pressResults[i] = prevPressScore + 1; // Player 2 wins the hole in press
+      } else {
+        pressResults[i] = prevPressScore; // Tie, no change
+      }
+    }
+
+    // trim the list to only include the holes that are relevant to the press
+    pressResults = pressResults.sublist(startHole);
+    return pressResults;
+  }
+
   Timer? _debounce;
 
   @override
@@ -83,6 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadRecentCourse();
     _loadSettings();
     _calculateMatchPlayScores();
+    _loadPressData();
     setState(() {});
   }
 
@@ -343,15 +441,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    // setState(() {
     matchPlayMode = prefs.getBool('matchPlayMode') ?? false;
     showFairwayGreen = prefs.getBool('showFairwayGreen') ?? false;
     showPutterRow = prefs.getBool('showPuttsPerHole') ?? false;
-    // mensHandicap = prefs.getBool('mensHandicap') ?? false;
     mensHandicap = true;
     teamMatchPlayMode = prefs.getBool('teamMatchPlayMode') ?? true;
     matchPlayFormat = prefs.getString('matchPlayFormat') ?? 'Four Ball';
-    // });
   }
 
   void _showSettingsPage(BuildContext context) {
@@ -512,6 +607,12 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
     // Trigger a rebuild to display the results
+    if (presses.isNotEmpty) {
+      for (int startHole in pressStartHoles) {
+        pressMatchPlayResults[pressStartHoles.indexOf(startHole)] =
+            _calculatePressMatchPlay(startHole);
+      }
+    }
     setState(() {});
   }
 
@@ -1401,11 +1502,29 @@ class _HomeScreenState extends State<HomeScreen> {
                                       'Error loading player names');
                                 } else {
                                   final playerNames = snapshot.data!;
-                                  return MatchPlayResultsRow(
-                                    matchPlayResults: matchPlayResultsPair1,
-                                    playerNames: [
-                                      playerNames[0] ?? 'Player 1',
-                                      playerNames[1] ?? 'Player 2'
+                                  return Column(
+                                    children: [
+                                      MatchPlayResultsRow(
+                                        matchPlayResults: matchPlayResultsPair1,
+                                        playerNames: [
+                                          playerNames[0] ?? 'Player 1',
+                                          playerNames[1] ?? 'Player 2',
+                                        ],
+                                        onLongPress: _startPress,
+                                      ),
+                                      for (var entry in presses
+                                          .entries) //TODO: found match play press here
+                                        MatchPlayPressRow(
+                                          startHole: entry.key,
+                                          pressResults:
+                                              _calculatePressMatchPlay(
+                                                  entry.key),
+                                          playerNames: [
+                                            playerNames[0] ?? 'Player 1',
+                                            playerNames[1] ?? 'Player 2',
+                                          ],
+                                          pressLabel: '${entry.key + 1}',
+                                        ),
                                     ],
                                   );
                                 }
@@ -1479,7 +1598,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 focusNodes: puttsFocusNodes,
                               ),
                             ),
-                          if (showFairwayGreen) // Conditionally render the row based on the switch state
+                          if (showFairwayGreen)
                             Padding(
                               padding:
                                   EdgeInsets.only(right: 20.0 * scaleFactor),

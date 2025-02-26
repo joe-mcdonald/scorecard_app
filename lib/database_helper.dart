@@ -59,6 +59,13 @@ class DatabaseHelper {
         putts INTEGER
       )
     ''');
+
+    // await db.execute('''
+    //   CREATE TABLE FavoriteCourses (
+    //     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    //     courseName TEXT
+    //   )
+    // ''');
   }
 
   Future<void> insertScore(int playerIndex, int holeIndex, int score) async {
