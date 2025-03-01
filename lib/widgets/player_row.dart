@@ -26,6 +26,7 @@ class PlayerRow extends StatefulWidget {
   final VoidCallback onScoreChanged;
   final Color? playerTeamColor;
   final Future<bool> Function(int index, int playerIndex)? isStrokeHole;
+  final List<bool> skinsWonByHole;
 
   const PlayerRow({
     super.key,
@@ -45,6 +46,7 @@ class PlayerRow extends StatefulWidget {
     required this.onScoreChanged,
     this.playerTeamColor,
     this.isStrokeHole,
+    required this.skinsWonByHole,
   });
 
   @override
@@ -61,21 +63,6 @@ class _PlayerRowState extends State<PlayerRow> {
     // _initializeFocusListeners();
     _loadScores();
   }
-
-  // void _initializeFocusListeners() {
-  //   allFocusNodes = widget.focusNodes;
-  //   for (var focusNode in allFocusNodes) {
-  //     focusNode.addListener(() {
-  //       if (!focusNode.hasFocus) {
-  //         for (var node in allFocusNodes) {
-  //           if (node != focusNode) {
-  //             node.unfocus();
-  //           }
-  //         }
-  //       }
-  //     });
-  //   }
-  // }
 
   Future<void> _loadScores() async {
     final scores = await dbHelper.getScores();
@@ -351,7 +338,9 @@ class _PlayerRowState extends State<PlayerRow> {
                   height: 80 * scaleFactor,
                   margin: EdgeInsets.all(2 * scaleFactor),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: widget.skinsWonByHole[index]
+                        ? Colors.yellow
+                        : Colors.white,
                     borderRadius: BorderRadius.only(
                       topLeft:
                           index == 0 ? const Radius.circular(12) : Radius.zero,

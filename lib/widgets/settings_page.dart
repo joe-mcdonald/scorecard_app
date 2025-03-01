@@ -21,6 +21,8 @@ class _SettingsPageState extends State<SettingsPage> {
   bool showMensHandicap = true;
   bool matchPlayMode = false;
   bool teamMatchPlayMode = false;
+  bool skinsMode = false;
+  int skinValue = 2;
   String matchPlayFormat = '';
   Timer? _popupTimer;
 
@@ -39,6 +41,8 @@ class _SettingsPageState extends State<SettingsPage> {
       matchPlayMode = prefs.getBool('matchPlayMode') ?? false;
       teamMatchPlayMode = prefs.getBool('teamMatchPlayMode') ?? false;
       matchPlayFormat = prefs.getString('matchPlayFormat') ?? '';
+      skinsMode = prefs.getBool('skinsMode') ?? false;
+      skinValue = prefs.getInt('skinValue') ?? 2;
     });
   }
 
@@ -70,6 +74,16 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _saveMatchPlayFormat(String matchPlayFormatValue) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('matchPlayFormat', matchPlayFormatValue);
+  }
+
+  Future<void> _saveSkinsMode(bool skinsModeValue) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('skinsMode', skinsModeValue);
+  }
+
+  Future<void> _saveSkinValue(int skinValue) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('skinValue', skinValue);
   }
 
   void _showPopup() {
@@ -137,6 +151,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         body: CupertinoFormSection.insetGrouped(
           backgroundColor: const Color.fromRGBO(225, 225, 225, 1),
+          margin: const EdgeInsets.all(10),
           children: [
             CupertinoFormRow(
               child: Row(
@@ -255,6 +270,83 @@ class _SettingsPageState extends State<SettingsPage> {
             //       ],
             //     ),
             //   ),
+            if (matchPlayMode == false)
+              CupertinoFormRow(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                      child: const Text('Skins Mode',
+                          style: TextStyle(fontSize: 20)),
+                    ),
+                    CupertinoSwitch(
+                      value: skinsMode,
+                      onChanged: (bool skinsModeValue) {
+                        skinsMode = skinsModeValue;
+                        setState(() {
+                          _saveSkinsMode(skinsModeValue);
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            if (matchPlayMode == false && skinsMode == true)
+              CupertinoFormRow(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                      child: const Text('Skin Value',
+                          style: TextStyle(fontSize: 20)),
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color.fromRGBO(225, 225, 225, 1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      width: 60,
+                      child: CupertinoButton(
+                        child: Text(
+                          skinValue.toString(),
+                          style: const TextStyle(
+                              fontSize: 20, color: Colors.black),
+                        ),
+                        onPressed: () => showCupertinoModalPopup(
+                            context: context,
+                            builder: (_) => SizedBox(
+                                width: double.infinity,
+                                height: 200,
+                                child: CupertinoPicker(
+                                  backgroundColor: Colors.white,
+                                  itemExtent: 30,
+                                  scrollController: FixedExtentScrollController(
+                                    initialItem: skinValue - 1,
+                                  ),
+                                  children: const [
+                                    Text('1'),
+                                    Text('2'),
+                                    Text('3'),
+                                    Text('4'),
+                                    Text('5'),
+                                    Text('6'),
+                                    Text('7'),
+                                    Text('8'),
+                                    Text('9'),
+                                    Text('10'),
+                                  ],
+                                  onSelectedItemChanged: (int index) {
+                                    skinValue = index + 1;
+                                    setState(() {
+                                      _saveSkinValue(index + 1);
+                                    });
+                                  },
+                                ))),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             CupertinoFormRow(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

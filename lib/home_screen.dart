@@ -18,6 +18,7 @@ import 'package:scorecard_app/widgets/match_play_results_row.dart';
 import 'package:scorecard_app/widgets/player_row.dart';
 import 'package:scorecard_app/widgets/putts_row.dart';
 import 'package:scorecard_app/widgets/settings_page.dart';
+import 'package:scorecard_app/widgets/skins_row.dart';
 import 'package:scorecard_app/widgets/team_match_play_results_row.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -78,6 +79,13 @@ class _HomeScreenState extends State<HomeScreen> {
   List<int> pressStartHoles = [];
   List<List<int>> pressMatchPlayResults = [];
   Map<int, List<int>> presses = {};
+
+  bool skinsMode = false;
+  int skinValue = 2;
+  List<int> skinsArray = List.generate(18, (index) => 2);
+  List<int> skinsWon = [0, 0, 0, 0];
+  List<List<bool>> skinsWonByHole =
+      List.generate(4, (_) => List.filled(18, false));
 
   Future<void> _startPress(int holeIndex) async {
     final prefs = await SharedPreferences.getInstance();
@@ -446,6 +454,8 @@ class _HomeScreenState extends State<HomeScreen> {
     mensHandicap = true;
     teamMatchPlayMode = prefs.getBool('teamMatchPlayMode') ?? true;
     matchPlayFormat = prefs.getString('matchPlayFormat') ?? 'Four Ball';
+    skinsMode = prefs.getBool('skinsMode') ?? false;
+    skinValue = prefs.getInt('skinValue') ?? 2;
   }
 
   void _showSettingsPage(BuildContext context) {
@@ -458,6 +468,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _calculateMatchPlay12() async {
+    if (matchPlayMode == false && skinsMode == true) {
+      await _calculateSkins();
+      return;
+    }
     final playerCount = await dbHelper.getPlayerCount();
     if (playerCount < 1) return;
 
@@ -616,6 +630,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _calculateMatchPlay34() async {
+    if (matchPlayMode == false && skinsMode == true) {
+      await _calculateSkins();
+      return;
+    }
     final playerCount = await dbHelper.getPlayerCount();
     if (playerCount < 1) return;
 
@@ -1063,6 +1081,275 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {});
   }
 
+  // Future<void> _calculateSkins() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final playerCount = await dbHelper.getPlayerCount();
+  //   List<int> player1Score = List.generate(18, (index) => 0);
+  //   List<int> player2Score = List.generate(18, (index) => 0);
+  //   List<int> player3Score = List.generate(18, (index) => 0);
+  //   List<int> player4Score = List.generate(18, (index) => 0);
+  //   // Track the winnings for player 1. eg. if value at index 3 is 8, means they won $8 on hole 4
+  //   List<int> player1Winnings = List.generate(18, (index) => 0);
+  //   List<int> player2Winnings = List.generate(18, (index) => 0);
+  //   List<int> player3Winnings = List.generate(18, (index) => 0);
+  //   List<int> player4Winnings = List.generate(18, (index) => 0);
+  //   if (playerCount == 2) {
+  //     int player1Handicap = await dbHelper.getHandicap(0) ?? 0;
+  //     int player2Handicap = await dbHelper.getHandicap(1) ?? 0;
+  //     int netStrokes = player1Handicap - player2Handicap;
+  //     // Get and set the scores for player 1 and player 2
+  //     for (int i = 0; i < 18; i++) {
+  //       player1Score[i] = await dbHelper.getScoreForHole(0, i);
+  //       player2Score[i] = await dbHelper.getScoreForHole(1, i);
+  //     }
+  //     for (int i = 0; i < 18; i++) {
+  //       if (player1Score[i] != 0 && player2Score[i] != 0) {
+  //       }
+  //     }
+  //   }
+  // }
+
+  Future<void> _calculateSkins() async {
+    final prefs = await SharedPreferences.getInstance();
+    final playerCount = await dbHelper.getPlayerCount();
+
+    List<int> player1Score = List.generate(18, (index) => 0);
+    List<int> player2Score = List.generate(18, (index) => 0);
+    List<int> player3Score = List.generate(18, (index) => 0);
+    List<int> player4Score = List.generate(18, (index) => 0);
+
+    int carryOver = prefs.getInt('skinValue') ?? 2; // Default $2 per skin
+    int skinValue = prefs.getInt('skinValue') ?? 2; // Default $2 per skin
+
+    // Initialize skinsArray globally (if not already initialized)
+    skinsArray = List.generate(18, (index) => skinValue);
+    skinsWon = [0, 0, 0, 0];
+    skinsWonByHole =
+        List.generate(4, (index) => List.generate(18, (index) => false));
+
+    if (playerCount == 2) {
+      int player1Handicap = await dbHelper.getHandicap(0) ?? 0;
+      int player2Handicap = await dbHelper.getHandicap(1) ?? 0;
+      int netStrokes = player1Handicap - player2Handicap;
+
+      // Get scores for both players
+      for (int i = 0; i < 18; i++) {
+        player1Score[i] = await dbHelper.getScoreForHole(0, i);
+        player2Score[i] = await dbHelper.getScoreForHole(1, i);
+      }
+
+      // Loop through each hole and determine who wins or if it's a tie
+      for (int i = 0; i < 18; i++) {
+        if (player1Score[i] == 0 || player2Score[i] == 0)
+          continue; // Skip unplayed holes
+
+        // Apply net strokes if necessary
+        int p1NetScore = player1Score[i] - (netStrokes > 0 ? 1 : 0);
+        int p2NetScore = player2Score[i] - (netStrokes < 0 ? 1 : 0);
+
+        if (p1NetScore < p2NetScore) {
+          // Player 1 wins, claim skins
+          skinsArray[i] = carryOver;
+          skinsWon[0] = skinsArray[i];
+          carryOver = skinValue; // Reset carryOver for the next hole
+          skinsWonByHole[0][i] = true;
+        } else if (p2NetScore < p1NetScore) {
+          // Player 2 wins, claim skins
+          skinsArray[i] = carryOver;
+          skinsWon[1] = skinsArray[i];
+          carryOver = skinValue; // Reset carryOver for the next hole
+          skinsWonByHole[1][i] = true;
+        } else {
+          // Tie: add the current carryOver to the next hole
+          skinsArray[i] = carryOver;
+          carryOver += skinValue;
+        }
+      }
+    }
+
+    // Handle cases where there are 3 or 4 players
+    if (playerCount >= 3) {
+      List<List<int>> scores = [player1Score, player2Score];
+
+      if (playerCount >= 3) scores.add(player3Score);
+      if (playerCount == 4) scores.add(player4Score);
+
+      // Get scores for all players
+      for (int i = 0; i < 18; i++) {
+        for (int p = 0; p < playerCount; p++) {
+          scores[p][i] = await dbHelper.getScoreForHole(p, i);
+        }
+      }
+
+      for (int i = 0; i < 18; i++) {
+        if (scores.any((scoreList) => scoreList[i] == 0)) {
+          continue; // Skip unplayed holes
+        }
+
+        // Determine the net scores for each player
+        List<int> netScores = List.generate(playerCount, (p) => scores[p][i]);
+
+        // Find the minimum score
+        int minScore = netScores.reduce((a, b) => a < b ? a : b);
+
+        // Check if there is a tie for the minimum score
+        int minScoreCount =
+            netScores.where((score) => score == minScore).length;
+
+        if (minScoreCount == 1) {
+          // Only one player has the minimum score, they win the skins
+          int winnerIndex = netScores.indexOf(minScore);
+          skinsArray[i] = carryOver;
+          skinsWon[winnerIndex] += skinsArray[i];
+          carryOver = skinValue; // Reset carryOver for the next hole
+          if (i < 17) skinsArray[i + 1] = skinValue;
+          skinsWonByHole[winnerIndex][i] = true;
+        } else {
+          // Tie: add the current carryOver to the next hole
+          skinsArray[i] = carryOver;
+          carryOver += skinValue;
+        }
+        if (i < 17) {
+          for (int j = i + 2; j < 18; j++) {
+            skinsArray[j] = skinsArray[j - 1] + skinValue;
+          }
+        }
+      }
+    }
+    setState(() {});
+  }
+
+  OverlayEntry? _skinsOverlay;
+
+  void _showSkinsOverlay(BuildContext context) async {
+    final overlay = Overlay.of(context);
+
+    _skinsOverlay = OverlayEntry(
+      builder: (context) => FutureBuilder<List<String>>(
+        future: _fetchPlayerNames(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else {
+            final playerNames = snapshot.data ?? [];
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: Container(
+                    color: Colors.black54,
+                  ),
+                ),
+                Center(
+                  child: SizedBox(
+                    width: 300,
+                    child: Material(
+                      color: Colors.white,
+                      elevation: 8,
+                      borderRadius: BorderRadius.circular(10),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              'Skins Results',
+                              style: TextStyle(
+                                fontSize: 30,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  playerNames[0],
+                                  style: const TextStyle(fontSize: 20),
+                                ),
+                                Text(
+                                  '\$${skinsWon[0]}',
+                                  style: const TextStyle(fontSize: 20),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  playerNames[1],
+                                  style: const TextStyle(fontSize: 20),
+                                ),
+                                Text(
+                                  '\$${skinsWon[1]}',
+                                  style: const TextStyle(fontSize: 20),
+                                ),
+                              ],
+                            ),
+                            if (playersControllers.length >= 3)
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    playerNames[2],
+                                    style: const TextStyle(fontSize: 20),
+                                  ),
+                                  Text(
+                                    '\$${skinsWon[2]}',
+                                    style: const TextStyle(fontSize: 20),
+                                  ),
+                                ],
+                              ),
+                            if (playersControllers.length >= 4)
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    playerNames[3],
+                                    style: const TextStyle(fontSize: 20),
+                                  ),
+                                  Text(
+                                    '\$${skinsWon[3]}',
+                                    style: const TextStyle(fontSize: 20),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
+        },
+      ),
+    );
+
+    overlay.insert(_skinsOverlay!);
+  }
+
+  Future<List<String>> _fetchPlayerNames() async {
+    List<String> playerNames = await Future.wait([
+      dbHelper.getPlayerName(0).then((value) => value ?? ''),
+      dbHelper.getPlayerName(1).then((value) => value ?? ''),
+      if (playersControllers.length >= 3)
+        dbHelper.getPlayerName(2).then((value) => value ?? ''),
+      if (playersControllers.length >= 4)
+        dbHelper.getPlayerName(3).then((value) => value ?? ''),
+    ]);
+    return playerNames;
+  }
+
+  void _hideSkinsOverlay() {
+    _skinsOverlay?.remove();
+    _skinsOverlay = null;
+  }
+
   @override
   // ignore: unused_element
   Widget build(BuildContext context) {
@@ -1280,6 +1567,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 5),
+                // if (skinsMode &&
+                //     Provider.of<CourseDataProvider>(context).playerCount >= 2)
+
                 if (teamMatchPlayMode &&
                     matchPlayMode &&
                     Provider.of<CourseDataProvider>(context).playerCount == 4)
@@ -1313,6 +1603,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ? const Color.fromRGBO(255, 139, 139, 1)
                                     : const Color.fromRGBO(171, 178, 255, 1),
                                 isStrokeHole: isStrokeHole,
+                                skinsWonByHole: skinsWonByHole[playerIndex],
                               );
                             }),
                             FutureBuilder<List<String?>>(
@@ -1411,6 +1702,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ? const Color.fromRGBO(255, 139, 139, 1)
                                     : const Color.fromRGBO(171, 178, 255, 1),
                                 isStrokeHole: isStrokeHole,
+                                skinsWonByHole: skinsWonByHole[playerIndex],
                               );
                             }),
                             FutureBuilder<List<String?>>(
@@ -1476,6 +1768,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 playersFocusNodes[playerIndex];
                             if (playerIndex == 0 || playerIndex == 1) {
                               return PlayerRow(
+                                //TODO SKINS HIGHLIGHTS
                                 playerIndex: playerIndex,
                                 tee: selectedTee,
                                 coursePars: pars[selectedTee]!.toList(),
@@ -1491,6 +1784,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 removePlayer: _removePlayer,
                                 onScoreChanged: _calculateMatchPlay12,
                                 isStrokeHole: isStrokeHole,
+                                skinsWonByHole: skinsWonByHole[playerIndex],
                               );
                             } else {
                               return Container();
@@ -1530,8 +1824,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ],
                                         onLongPress: _startPress,
                                       ),
-                                      for (var entry in presses
-                                          .entries) //TODO: found match play press here
+                                      for (var entry in presses.entries)
                                         MatchPlayPressRow(
                                           startHole: entry.key,
                                           pressResults:
@@ -1572,6 +1865,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 removePlayer: _removePlayer,
                                 onScoreChanged: _calculateMatchPlay34,
                                 isStrokeHole: isStrokeHole,
+                                skinsWonByHole: skinsWonByHole[playerIndex],
                               );
                             } else {
                               return Container();
@@ -1604,6 +1898,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                   );
                                 }
                               },
+                            ),
+                          if (skinsMode &&
+                              Provider.of<CourseDataProvider>(context)
+                                      .playerCount >=
+                                  2)
+                            SkinsRow(
+                              holeNumber: 1,
+                              skinValue: skinsArray,
                             ),
                           if (showPutterRow)
                             Padding(
@@ -1713,6 +2015,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
+                // box that shows the skins won be each player
+                // if (skinsMode && playersControllers.length >= 2)
+                //   Column(
+                //     children: [
+                //       Text('Player 1 Skins won: ${skinsWon[0]}'),
+                //       Text('Player 2 Skins won: ${skinsWon[1]}'),
+                //       if (playersControllers.length >= 3)
+                //         Text('Player 3 Skins won: ${skinsWon[2]}'),
+                //       if (playersControllers.length >= 4)
+                //         Text('Player 4 Skins won: ${skinsWon[3]}'),
+                //     ],
+                //   ),
               ],
             ),
           ),
@@ -1756,6 +2070,26 @@ class _HomeScreenState extends State<HomeScreen> {
               //       ],
               //     ),
               //   ),
+              const SizedBox(width: 25),
+              GestureDetector(
+                onLongPress: () =>
+                    _showSkinsOverlay(context), // Show overlay on hold
+                onLongPressUp: _hideSkinsOverlay, // Hide overlay when released
+                child: Container(
+                  width: 75,
+                  height: 75,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'Skins\nResults',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                ), // Eye icon for skins results
+              ),
+
               const Spacer(), // Pushes the settings button to the right
               IconButton(
                 onPressed: () {
