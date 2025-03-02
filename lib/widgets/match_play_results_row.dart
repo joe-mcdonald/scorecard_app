@@ -1,3 +1,4 @@
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:scorecard_app/scale_factor_provider.dart';
@@ -18,6 +19,35 @@ class MatchPlayResultsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final scaleFactor =
         Provider.of<ScaleFactorProvider>(context, listen: false).scaleFactor;
+
+    String frontWinnerName = '';
+    String backWinnerName = '';
+    String totalWinnerName = '';
+    if (matchPlayResults[8] - matchPlayResults[0] > 0) {
+      frontWinnerName = playerNames[1];
+    } else if (matchPlayResults[8] - matchPlayResults[0] < 0) {
+      frontWinnerName = playerNames[0];
+    } else {
+      frontWinnerName = 'Tie';
+    }
+    if (matchPlayResults[17] - matchPlayResults[9] > 0) {
+      backWinnerName = playerNames[1];
+    } else if (matchPlayResults[17] - matchPlayResults[9] < 0) {
+      backWinnerName = playerNames[0];
+    } else {
+      backWinnerName = 'Tie';
+    }
+    if (((matchPlayResults[17] - matchPlayResults[9]) +
+            (matchPlayResults[8] - matchPlayResults[0])) >
+        0) {
+      totalWinnerName = playerNames[1];
+    } else if (((matchPlayResults[17] - matchPlayResults[9]) +
+            (matchPlayResults[8] - matchPlayResults[0])) <
+        0) {
+      totalWinnerName = playerNames[0];
+    } else {
+      totalWinnerName = 'Tie';
+    }
 
     return Row(
       children: [
@@ -122,16 +152,50 @@ class MatchPlayResultsRow extends StatelessWidget {
         }),
         Container(
           width: 100 * scaleFactor,
-          height: 80 * scaleFactor,
+          height: 81 * scaleFactor,
           margin: EdgeInsets.all(2 * scaleFactor),
           decoration: const BoxDecoration(
-            color: Colors.transparent,
+            color: Colors.white,
             borderRadius: BorderRadius.only(
               topRight: Radius.circular(12),
               bottomRight: Radius.circular(12),
             ),
           ),
-          child: const Column(),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AutoSizeText(
+                'F: ${frontWinnerName}',
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 18,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                minFontSize: 12,
+                textAlign: TextAlign.left,
+              ),
+              AutoSizeText(
+                'B: $backWinnerName',
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 18,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                minFontSize: 12,
+                textAlign: TextAlign.left,
+              ),
+              AutoSizeText(
+                'T: $totalWinnerName',
+                style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold),
+                overflow: TextOverflow.ellipsis,
+                minFontSize: 12,
+                textAlign: TextAlign.left,
+              ),
+            ],
+          ),
         ),
       ],
     );

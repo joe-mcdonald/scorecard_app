@@ -475,13 +475,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final playerCount = await dbHelper.getPlayerCount();
     if (playerCount < 1) return;
 
-    // if (await dbHelper.getPlayerCount() as int < 2) return;
-
     int player1Handicap = (await dbHelper.getHandicap(0)) ?? 0;
     int player2Handicap = (await dbHelper.getHandicap(1)) ?? 0;
-    int netStrokes = player1Handicap -
-        player2Handicap; //if negative, player 2 gets strokes, if positive, player 1 gets strokes
+    //if negative, player 2 gets strokes, if positive, player 1 gets strokes
+    int netStrokes = player1Handicap - player2Handicap;
+
     matchPlayResultsPair1 = List.generate(18, (index) => 0);
+
     for (int i = 0; i < 18; i++) {
       final player1Score = await dbHelper.getScoreForHole(0, i);
       final player2Score = await dbHelper.getScoreForHole(1, i);
@@ -492,11 +492,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       bool isHandicapHole = false;
-      // if (mensHandicap) {
       isHandicapHole = mensHcap[i] <= netStrokes.abs();
-      // } else {
-      //   isHandicapHole = womensHcap[i] <= netStrokes;
-      // }
 
       if (player1Score != 0 && player2Score != 0) {
         if (isHandicapHole) {
@@ -504,20 +500,20 @@ class _HomeScreenState extends State<HomeScreen> {
             //player 1 gets extra stroke
             if ((player1Score < player2Score + 1)) {
               //playerindex 0 holeindex i < playerindex 1 holeindex i + 1
-              if (i == 0) {
+              if (i == 0 || i == 9) {
                 matchPlayResultsPair1[i] = -1; //negative == player 1 lead
               } else {
                 matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1] - 1;
               }
             } else if (player1Score > (player2Score) + 1) {
               //playerindex 0 holeindex i > playerindex 1 holeindex i + 1
-              if (i == 0) {
+              if (i == 0 || i == 9) {
                 matchPlayResultsPair1[i] = 1; //positive  == player 2 lead
               } else {
                 matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1] + 1;
               }
             } else {
-              if (i == 0) {
+              if (i == 0 || i == 9) {
                 matchPlayResultsPair1[i] = 0; //tie == nothing changes
               } else {
                 matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1];
@@ -526,20 +522,20 @@ class _HomeScreenState extends State<HomeScreen> {
           } else if (netStrokes < 0) {
             if (((player1Score) + 1 < (player2Score))) {
               //playerindex 0 holeindex i  + 1 < playerindex 1 holeindex i
-              if (i == 0) {
+              if (i == 0 || i == 9) {
                 matchPlayResultsPair1[i] = -1; //negative == player 1 lead
               } else {
                 matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1] - 1;
               }
             } else if ((player1Score) + 1 > (player2Score)) {
               //playerindex 0 holeindex i + 1 > playerindex 1 holeindex i
-              if (i == 0) {
+              if (i == 0 || i == 9) {
                 matchPlayResultsPair1[i] = 1; //positive  == player 2 lead
               } else {
                 matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1] + 1;
               }
             } else {
-              if (i == 0) {
+              if (i == 0 || i == 9) {
                 matchPlayResultsPair1[i] = 0; //tie == nothing changes
               } else {
                 matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1];
@@ -547,22 +543,22 @@ class _HomeScreenState extends State<HomeScreen> {
             }
           }
         } else {
-          if ((player1Score < (player2Score))) {
+          if ((player1Score < player2Score)) {
             //playerindex 0 holeindex i < playerindex 1 holeindex i
-            if (i == 0) {
+            if (i == 0 || i == 9) {
               matchPlayResultsPair1[i] = -1; //negative == player 1 lead
             } else {
               matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1] - 1;
             }
           } else if (player1Score > (player2Score)) {
             //playerindex 0 holeindex i > playerindex 1 holeindex i
-            if (i == 0) {
+            if (i == 0 || i == 9) {
               matchPlayResultsPair1[i] = 1; //positive  == player 2 lead
             } else {
               matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1] + 1;
             }
           } else {
-            if (i == 0) {
+            if (i == 0 || i == 9) {
               matchPlayResultsPair1[i] = 0; //tie == nothing changes
             } else {
               matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1];
@@ -653,33 +649,26 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      // final isHandicapHole = mensHandicap
-      //     ? mensHcap[i] <= netStrokes.abs()
-      //     : womensHcap[i] <= netStrokes;
-
       final isHandicapHole = mensHcap[i] <= netStrokes.abs();
 
-      // ignore: unrelated_type_equality_checks
       if (player3Score != 0 && player4Score != 0) {
         if (isHandicapHole) {
           if (netStrokes > 0) {
             //player 1 gets extra stroke
             if ((player3Score < player4Score + 1)) {
-              //playerindex 0 holeindex i < playerindex 1 holeindex i + 1
-              if (i == 0) {
+              if (i == 0 || i == 9) {
                 matchPlayResultsPair2[i] = -1; //negative == player 1 lead
               } else {
                 matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1] - 1;
               }
             } else if (player3Score > (player4Score) + 1) {
-              //playerindex 0 holeindex i > playerindex 1 holeindex i + 1
-              if (i == 0) {
+              if (i == 0 || i == 9) {
                 matchPlayResultsPair2[i] = 1; //positive  == player 2 lead
               } else {
                 matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1] + 1;
               }
             } else {
-              if (i == 0) {
+              if (i == 0 || i == 9) {
                 matchPlayResultsPair2[i] = 0; //tie == nothing changes
               } else {
                 matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1];
@@ -687,21 +676,19 @@ class _HomeScreenState extends State<HomeScreen> {
             }
           } else if (netStrokes < 0) {
             if (((player3Score) + 1 < (player4Score))) {
-              //playerindex 0 holeindex i  + 1 < playerindex 1 holeindex i
-              if (i == 0) {
+              if (i == 0 || i == 9) {
                 matchPlayResultsPair2[i] = -1; //negative == player 1 lead
               } else {
                 matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1] - 1;
               }
             } else if ((player3Score) + 1 > (player4Score)) {
-              //playerindex 0 holeindex i + 1 > playerindex 1 holeindex i
-              if (i == 0) {
+              if (i == 0 || i == 9) {
                 matchPlayResultsPair2[i] = 1; //positive  == player 2 lead
               } else {
                 matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1] + 1;
               }
             } else {
-              if (i == 0) {
+              if (i == 0 || i == 9) {
                 matchPlayResultsPair2[i] = 0; //tie == nothing changes
               } else {
                 matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1];
@@ -710,21 +697,19 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         } else {
           if ((player3Score < (player4Score))) {
-            //playerindex 0 holeindex i < playerindex 1 holeindex i
-            if (i == 0) {
+            if (i == 0 || i == 9) {
               matchPlayResultsPair2[i] = -1; //negative == player 1 lead
             } else {
               matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1] - 1;
             }
           } else if (player3Score > (player4Score)) {
-            //playerindex 0 holeindex i > playerindex 1 holeindex i
-            if (i == 0) {
+            if (i == 0 || i == 9) {
               matchPlayResultsPair2[i] = 1; //positive  == player 2 lead
             } else {
               matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1] + 1;
             }
           } else {
-            if (i == 0) {
+            if (i == 0 || i == 9) {
               matchPlayResultsPair2[i] = 0; //tie == nothing changes
             } else {
               matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1];
@@ -2070,25 +2055,27 @@ class _HomeScreenState extends State<HomeScreen> {
               //       ],
               //     ),
               //   ),
-              const SizedBox(width: 25),
-              GestureDetector(
-                onLongPress: () =>
-                    _showSkinsOverlay(context), // Show overlay on hold
-                onLongPressUp: _hideSkinsOverlay, // Hide overlay when released
-                child: Container(
-                  width: 75,
-                  height: 75,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    'Skins\nResults',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 18),
-                  ),
-                ), // Eye icon for skins results
-              ),
+              if (skinsMode) const SizedBox(width: 25),
+              if (skinsMode)
+                GestureDetector(
+                  onLongPress: () =>
+                      _showSkinsOverlay(context), // Show overlay on hold
+                  onLongPressUp:
+                      _hideSkinsOverlay, // Hide overlay when released
+                  child: Container(
+                    width: 75,
+                    height: 75,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      'Skins\nResults',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 18),
+                    ),
+                  ), // Eye icon for skins results
+                ),
 
               const Spacer(), // Pushes the settings button to the right
               IconButton(
