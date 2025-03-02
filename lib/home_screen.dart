@@ -475,9 +475,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final playerCount = await dbHelper.getPlayerCount();
     if (playerCount < 1) return;
 
+    //if negative, player 2 gets strokes, if positive, player 1 gets strokes
     int player1Handicap = (await dbHelper.getHandicap(0)) ?? 0;
     int player2Handicap = (await dbHelper.getHandicap(1)) ?? 0;
-    //if negative, player 2 gets strokes, if positive, player 1 gets strokes
     int netStrokes = player1Handicap - player2Handicap;
 
     matchPlayResultsPair1 = List.generate(18, (index) => 0);
@@ -568,52 +568,6 @@ class _HomeScreenState extends State<HomeScreen> {
       } else {
         matchPlayResultsPair1[i] = 0;
       }
-      if (!hasSeenMatchPlayWinDialog &&
-          ((i == 17 && matchPlayResultsPair1[17].abs() >= 1) ||
-              (i == 16 && matchPlayResultsPair1[16].abs() >= 2) ||
-              (i == 15 && matchPlayResultsPair1[15].abs() >= 3) ||
-              (i == 14 && matchPlayResultsPair1[14].abs() >= 4) ||
-              (i == 13 && matchPlayResultsPair1[13].abs() >= 5) ||
-              (i == 12 && matchPlayResultsPair1[12].abs() >= 6) ||
-              (i == 11 && matchPlayResultsPair1[11].abs() >= 7) ||
-              (i == 10 && matchPlayResultsPair1[10].abs() >= 8))) {
-        hasSeenMatchPlayWinDialog = true;
-        if (matchPlayResultsPair1[i] < 0) {
-          // Player 1 wins
-          showCupertinoDialog(
-            context: context,
-            builder: (BuildContext context) => CupertinoAlertDialog(
-              title: const Text('Player 1 Wins!'),
-              content: const Text('Player 1 has won the match play.'),
-              actions: <CupertinoDialogAction>[
-                CupertinoDialogAction(
-                  child: const Text('OK'),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
-            ),
-          );
-        } else if (matchPlayResultsPair1[i] > 0) {
-          // Player 2 wins
-          showCupertinoDialog(
-            context: context,
-            builder: (BuildContext context) => CupertinoAlertDialog(
-              title: const Text('Player 2 Wins!'),
-              content: const Text('Player 2 has won the match play.'),
-              actions: <CupertinoDialogAction>[
-                CupertinoDialogAction(
-                  child: const Text('OK'),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
-            ),
-          );
-        }
-      }
     }
     // Trigger a rebuild to display the results
     if (presses.isNotEmpty) {
@@ -633,13 +587,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final playerCount = await dbHelper.getPlayerCount();
     if (playerCount < 1) return;
 
-    // if (await dbHelper.getPlayerCount() as int < 2) return;
-
+    //if negative, player 2 gets strokes, if positive, player 1 gets strokes
     int player3Handicap = (await dbHelper.getHandicap(2)) ?? 0;
     int player4Handicap = (await dbHelper.getHandicap(3)) ?? 0;
-    int netStrokes = player3Handicap -
-        player4Handicap; //if negative, player 2 gets strokes, if positive, player 1 gets strokes
+    int netStrokes = player3Handicap - player4Handicap;
+
     matchPlayResultsPair2 = List.generate(18, (index) => 0);
+
     for (int i = 0; i < 18; i++) {
       final player3Score = await dbHelper.getScoreForHole(2, i);
       final player4Score = await dbHelper.getScoreForHole(3, i);
@@ -719,54 +673,14 @@ class _HomeScreenState extends State<HomeScreen> {
       } else {
         matchPlayResultsPair2[i] = 0;
       }
-      if (!hasSeenMatchPlayWinDialog &&
-          ((i == 17 && matchPlayResultsPair2[17].abs() >= 1) ||
-              (i == 16 && matchPlayResultsPair2[16].abs() >= 2) ||
-              (i == 15 && matchPlayResultsPair2[15].abs() >= 3) ||
-              (i == 14 && matchPlayResultsPair2[14].abs() >= 4) ||
-              (i == 13 && matchPlayResultsPair2[13].abs() >= 5) ||
-              (i == 12 && matchPlayResultsPair2[12].abs() >= 6) ||
-              (i == 11 && matchPlayResultsPair2[11].abs() >= 7) ||
-              (i == 10 && matchPlayResultsPair2[10].abs() >= 8))) {
-        hasSeenMatchPlayWinDialog = true;
-        if (matchPlayResultsPair2[i] < 0) {
-          // Player 1 wins
-          showCupertinoDialog(
-            context: context,
-            builder: (BuildContext context) => CupertinoAlertDialog(
-              title: const Text('Player 3 Wins!'),
-              content: const Text('Player 3 has won the match play.'),
-              actions: <CupertinoDialogAction>[
-                CupertinoDialogAction(
-                  child: const Text('OK'),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
-            ),
-          );
-        } else if (matchPlayResultsPair2[i] > 0) {
-          // Player 2 wins
-          showCupertinoDialog(
-            context: context,
-            builder: (BuildContext context) => CupertinoAlertDialog(
-              title: const Text('Player 4 Wins!'),
-              content: const Text('Player 4 has won the match play.'),
-              actions: <CupertinoDialogAction>[
-                CupertinoDialogAction(
-                  child: const Text('OK'),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
-            ),
-          );
-        }
-      }
     }
     // Trigger a rebuild to display the results
+    if (presses.isNotEmpty) {
+      for (int startHole in pressStartHoles) {
+        pressMatchPlayResults[pressStartHoles.indexOf(startHole)] =
+            _calculatePressMatchPlay(startHole, false);
+      }
+    }
     setState(() {});
   }
 
