@@ -210,6 +210,11 @@ class _PlayerRowState extends State<PlayerRow> {
   Widget build(BuildContext context) {
     final scaleFactor = Provider.of<ScaleFactorProvider>(context).scaleFactor;
 
+    int length = 18;
+    if (widget.coursePars.contains(0)) {
+      length = 9;
+    }
+
     return Row(
       children: [
         GestureDetector(
@@ -328,7 +333,7 @@ class _PlayerRowState extends State<PlayerRow> {
             ),
           ),
         ),
-        ...List.generate(18, (index) {
+        ...List.generate((length), (index) {
           return FutureBuilder<bool>(
               future: widget.isStrokeHole?.call(index, widget.playerIndex),
               builder: (context, snapshot) {
@@ -376,36 +381,50 @@ class _PlayerRowState extends State<PlayerRow> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              AutoSizeText(
-                'F: ${widget.score.sublist(0, 9).reduce((a, b) => a + b)}',
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 18,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                minFontSize: 12,
-                textAlign: TextAlign.left,
-              ),
-              AutoSizeText(
-                'B: ${widget.score.sublist(9, 18).reduce((a, b) => a + b)}',
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 18,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                minFontSize: 12,
-                textAlign: TextAlign.left,
-              ),
-              AutoSizeText(
-                'T: ${widget.score.sublist(0, 18).reduce((a, b) => a + b) - widget.coursePars.reduce((a, b) => a + b) >= 0 ? "+" : ""}${widget.score.sublist(0, 18).reduce((a, b) => a + b) - widget.coursePars.reduce((a, b) => a + b)}/${widget.score.sublist(0, 18).reduce((a, b) => a + b)}',
-                style: const TextStyle(
+              if (length == 18)
+                AutoSizeText(
+                  'F: ${widget.score.sublist(0, 9).reduce((a, b) => a + b)}',
+                  style: const TextStyle(
                     color: Colors.black,
                     fontSize: 18,
-                    fontWeight: FontWeight.bold),
-                overflow: TextOverflow.ellipsis,
-                minFontSize: 12,
-                textAlign: TextAlign.left,
-              ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  minFontSize: 12,
+                  textAlign: TextAlign.left,
+                ),
+              if (length == 18)
+                AutoSizeText(
+                  'B: ${widget.score.sublist(9, 18).reduce((a, b) => a + b)}',
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 18,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  minFontSize: 12,
+                  textAlign: TextAlign.left,
+                ),
+              if (length == 18)
+                AutoSizeText(
+                  'T: ${widget.score.sublist(0, 18).reduce((a, b) => a + b) - widget.coursePars.reduce((a, b) => a + b) >= 0 ? "+" : ""}${widget.score.sublist(0, 18).reduce((a, b) => a + b) - widget.coursePars.reduce((a, b) => a + b)}/${widget.score.sublist(0, 18).reduce((a, b) => a + b)}',
+                  style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                  minFontSize: 12,
+                  textAlign: TextAlign.left,
+                ),
+              if (length == 9)
+                AutoSizeText(
+                  'T: ${widget.score.sublist(0, 9).reduce((a, b) => a + b) - widget.coursePars.reduce((a, b) => a + b) >= 0 ? "+" : ""}${widget.score.sublist(0, 9).reduce((a, b) => a + b) - widget.coursePars.reduce((a, b) => a + b)}/${widget.score.sublist(0, 9).reduce((a, b) => a + b)}',
+                  style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                  minFontSize: 12,
+                  textAlign: TextAlign.left,
+                ),
             ],
           ),
         ),

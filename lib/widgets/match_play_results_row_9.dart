@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:scorecard_app/scale_factor_provider.dart';
 
-class MatchPlayResultsRow extends StatelessWidget {
+class MatchPlayResultsRow9 extends StatelessWidget {
   final List<int> matchPlayResults;
   final List<String> playerNames;
   final Function(int)? onLongPress; //callback function
 
-  const MatchPlayResultsRow({
+  const MatchPlayResultsRow9({
     super.key,
     required this.matchPlayResults,
     required this.playerNames,
@@ -55,7 +55,7 @@ class MatchPlayResultsRow extends StatelessWidget {
           padding: EdgeInsets.only(right: 0 * scaleFactor),
           margin: EdgeInsets.all(2 * scaleFactor),
           decoration: const BoxDecoration(
-            color: Colors.white,
+            color: const Color.fromARGB(255, 243, 243, 243),
             borderRadius: BorderRadius.only(
               topRight: Radius.circular(12),
               bottomRight: Radius.circular(12),
@@ -71,7 +71,7 @@ class MatchPlayResultsRow extends StatelessWidget {
                   height: scaleFactor * 70,
                   child: const Center(
                     child: Text(
-                      'Full\n18',
+                      'Front\n9',
                       style: TextStyle(color: Colors.black, fontSize: 23),
                       textAlign: TextAlign.center,
                     ),
@@ -81,7 +81,7 @@ class MatchPlayResultsRow extends StatelessWidget {
             ),
           ),
         ),
-        ...List.generate(18, (index) {
+        ...List.generate(9, (index) {
           return GestureDetector(
             onLongPress: () {
               if (onLongPress != null && index != 0) {
@@ -93,7 +93,7 @@ class MatchPlayResultsRow extends StatelessWidget {
               height: 80 * scaleFactor,
               margin: EdgeInsets.all(2 * scaleFactor),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: const Color.fromARGB(255, 243, 243, 243),
                 borderRadius: BorderRadius.only(
                   topLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
                   bottomLeft:
@@ -112,11 +112,6 @@ class MatchPlayResultsRow extends StatelessWidget {
                           matchPlayResults[index].abs().toString(),
                           textAlign: TextAlign.center,
                           style: const TextStyle(
-                            // color: matchPlayResults[index] < 0
-                            //     ? Colors.red
-                            //     : matchPlayResults[index] > 0
-                            //         ? const Color.fromARGB(198, 0, 0, 255)
-                            //         : Colors.black,
                             fontSize: 35,
                             fontWeight: FontWeight.bold,
                           ),
@@ -133,11 +128,6 @@ class MatchPlayResultsRow extends StatelessWidget {
                                   : 'Tie',
                           textAlign: TextAlign.center,
                           style: const TextStyle(
-                            // color: matchPlayResults[index] < 0
-                            //     ? Colors.red
-                            //     : matchPlayResults[index] > 0
-                            //         ? const Color.fromARGB(198, 0, 0, 255)
-                            //         : Colors.black,
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
@@ -155,7 +145,7 @@ class MatchPlayResultsRow extends StatelessWidget {
           height: 81 * scaleFactor,
           margin: EdgeInsets.all(2 * scaleFactor),
           decoration: const BoxDecoration(
-            color: Colors.white,
+            color: Color.fromARGB(255, 243, 243, 243),
             borderRadius: BorderRadius.only(
               topRight: Radius.circular(12),
               bottomRight: Radius.circular(12),
@@ -165,38 +155,38 @@ class MatchPlayResultsRow extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               AutoSizeText(
-                'F: ${frontWinnerName}',
+                'Front:\n$frontWinnerName',
                 style: const TextStyle(
                   color: Colors.black,
-                  fontSize: 18,
+                  fontSize: 23,
                   overflow: TextOverflow.ellipsis,
                 ),
                 minFontSize: 12,
-                textAlign: TextAlign.left,
-              ),
-              AutoSizeText(
-                'B: $backWinnerName',
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 18,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                minFontSize: 12,
-                textAlign: TextAlign.left,
-              ),
-              AutoSizeText(
-                'T: $totalWinnerName',
-                style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold),
-                overflow: TextOverflow.ellipsis,
-                minFontSize: 12,
-                textAlign: TextAlign.left,
+                textAlign: TextAlign.center,
               ),
             ],
           ),
         ),
+        ...List.generate(9, (index) {
+          return Container(
+            width: 100 * scaleFactor,
+            height: 80 * scaleFactor,
+            margin: EdgeInsets.all(2 * scaleFactor),
+            child: const Center(
+              child: SizedBox(
+                width: double.infinity,
+                height: double.infinity,
+                child: Center(
+                  child: Column(
+                    children: [
+                      SizedBox(height: 4),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
       ],
     );
   }

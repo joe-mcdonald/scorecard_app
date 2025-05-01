@@ -138,6 +138,8 @@ class _CourseActionSheetState extends State<CourseActionSheet> {
           _buildAction('calclub', 'Cal Club', 'San Francisco, CA'),
           _buildAction('cordovabaygolfcourse', 'Cordova Bay Golf Course',
               'Victoria, BC'),
+          _buildAction('cordovabayridgecourse', 'Cordova Bay Ridge Course',
+              'Victoria, BC'),
           _buildAction('chateaufairmontwhistler', 'Chateau Fairmont Whistler',
               'Whistler, BC'),
           _buildAction('desertfalls', 'Desert Falls', 'Palm Desert, CA'),

@@ -21,6 +21,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool showMensHandicap = true;
   bool matchPlayMode = false;
   bool teamMatchPlayMode = false;
+  bool addRowForFront9 = false;
   bool skinsMode = false;
   int skinValue = 2;
   String matchPlayFormat = '';
@@ -41,6 +42,7 @@ class _SettingsPageState extends State<SettingsPage> {
       matchPlayMode = prefs.getBool('matchPlayMode') ?? false;
       teamMatchPlayMode = prefs.getBool('teamMatchPlayMode') ?? false;
       matchPlayFormat = prefs.getString('matchPlayFormat') ?? '';
+      addRowForFront9 = prefs.getBool('addRowForFront9') ?? false;
       skinsMode = prefs.getBool('skinsMode') ?? false;
       skinValue = prefs.getInt('skinValue') ?? 2;
     });
@@ -69,6 +71,11 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _saveTeamMatchPlayMode(bool teamMatchPlayModeValue) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('teamMatchPlayMode', teamMatchPlayModeValue);
+  }
+
+  Future<void> _saveAddRowForFront9(bool addRowForFront9Value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('addRowForFront9', addRowForFront9Value);
   }
 
   Future<void> _saveMatchPlayFormat(String matchPlayFormatValue) async {
@@ -188,6 +195,27 @@ class _SettingsPageState extends State<SettingsPage> {
                         teamMatchPlayMode = teamMatchPlayModeValue;
                         setState(() {
                           _saveTeamMatchPlayMode(teamMatchPlayModeValue);
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            if (matchPlayMode)
+              CupertinoFormRow(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                      child: const Text('Add For For Front 9',
+                          style: TextStyle(fontSize: 20)),
+                    ),
+                    CupertinoSwitch(
+                      value: addRowForFront9,
+                      onChanged: (bool addRowForFront9Value) {
+                        addRowForFront9 = addRowForFront9Value;
+                        setState(() {
+                          _saveAddRowForFront9(addRowForFront9Value);
                         });
                       },
                     ),

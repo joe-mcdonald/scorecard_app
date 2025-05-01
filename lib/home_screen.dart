@@ -15,6 +15,7 @@ import 'package:scorecard_app/scale_factor_provider.dart';
 import 'package:scorecard_app/widgets/course_action_sheet.dart';
 import 'package:scorecard_app/widgets/match_play_press_row.dart';
 import 'package:scorecard_app/widgets/match_play_results_row.dart';
+import 'package:scorecard_app/widgets/match_play_results_row_9.dart';
 import 'package:scorecard_app/widgets/player_row.dart';
 import 'package:scorecard_app/widgets/putts_row.dart';
 import 'package:scorecard_app/widgets/settings_page.dart';
@@ -68,6 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool showPutterRow = false;
   bool matchPlayMode = false;
   bool teamMatchPlayMode = false;
+  bool addRowForFront9 = false;
   String matchPlayFormat = 'Four Ball';
   ScrollController scrollController = ScrollController();
   bool hasSeenMatchPlayWinDialog = false;
@@ -348,6 +350,11 @@ class _HomeScreenState extends State<HomeScreen> {
         controller.clear();
       }
 
+      int numberOfHoles = 18;
+      if (selectedCourse == 'Cordova Bay Ridge Course') {
+        numberOfHoles = 9;
+      }
+
       fairwaysHit = List.generate(18, (index) => 0);
       score = List.generate(4, (index) => List.generate(18, (index) => 0));
       greensHit = List.generate(18, (index) => 0);
@@ -453,6 +460,7 @@ class _HomeScreenState extends State<HomeScreen> {
     showPutterRow = prefs.getBool('showPuttsPerHole') ?? false;
     mensHandicap = true;
     teamMatchPlayMode = prefs.getBool('teamMatchPlayMode') ?? true;
+    addRowForFront9 = prefs.getBool('addRowForFront9') ?? false;
     matchPlayFormat = prefs.getString('matchPlayFormat') ?? 'Four Ball';
     skinsMode = prefs.getBool('skinsMode') ?? false;
     skinValue = prefs.getInt('skinValue') ?? 2;
@@ -968,7 +976,9 @@ class _HomeScreenState extends State<HomeScreen> {
       } else {
         if (playerCount == 2 || playerCount == 3 || playerCount == 4) {
           await _calculateMatchPlay12();
-          if (Provider.of<CourseDataProvider>(context).playerCount == 4) {
+          if (Provider.of<CourseDataProvider>(context, listen: false)
+                  .playerCount ==
+              4) {
             await _calculateMatchPlay34();
           }
         }
@@ -1039,12 +1049,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // Loop through each hole and determine who wins or if it's a tie
       for (int i = 0; i < 18; i++) {
-        if (player1Score[i] == 0 || player2Score[i] == 0)
+        if (player1Score[i] == 0 || player2Score[i] == 0) {
           continue; // Skip unplayed holes
+        }
 
         // Apply net strokes if necessary
-        int p1NetScore = player1Score[i] - (netStrokes > 0 ? 1 : 0);
-        int p2NetScore = player2Score[i] - (netStrokes < 0 ? 1 : 0);
+        bool isHandicapHole = false;
+        isHandicapHole = mensHcap[i] <= netStrokes.abs();
+        int p1NetScore = player1Score[i];
+        int p2NetScore = player2Score[i];
+        if (isHandicapHole) {
+          p1NetScore = player1Score[i] - (netStrokes > 0 ? 1 : 0);
+          p2NetScore = player2Score[i] - (netStrokes < 0 ? 1 : 0);
+        }
 
         if (p1NetScore < p2NetScore) {
           // Player 1 wins, claim skins
@@ -1069,9 +1086,19 @@ class _HomeScreenState extends State<HomeScreen> {
     // Handle cases where there are 3 or 4 players
     if (playerCount >= 3) {
       List<List<int>> scores = [player1Score, player2Score];
+      List<int> handicaps = [
+        await dbHelper.getHandicap(0) ?? 0,
+        await dbHelper.getHandicap(1) ?? 0
+      ];
 
-      if (playerCount >= 3) scores.add(player3Score);
-      if (playerCount == 4) scores.add(player4Score);
+      if (playerCount >= 3) {
+        scores.add(player3Score);
+        handicaps.add(await dbHelper.getHandicap(2) ?? 0);
+      }
+      if (playerCount == 4) {
+        scores.add(player4Score);
+        handicaps.add(await dbHelper.getHandicap(3) ?? 0);
+      }
 
       // Get scores for all players
       for (int i = 0; i < 18; i++) {
@@ -1086,7 +1113,15 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         // Determine the net scores for each player
-        List<int> netScores = List.generate(playerCount, (p) => scores[p][i]);
+        // List<int> netScores = List.generate(playerCount, (p) => scores[p][i]);
+
+        int lowestHandicap = handicaps.reduce((a, b) => a < b ? a : b);
+
+        List<int> netScores = List.generate(playerCount, (p) {
+          int handicapDifference = handicaps[p] - lowestHandicap;
+          bool getsStroke = mensHcap[i] <= handicapDifference.abs();
+          return scores[p][i] - (getsStroke ? 1 : 0);
+        });
 
         // Find the minimum score
         int minScore = netScores.reduce((a, b) => a < b ? a : b);
@@ -1254,6 +1289,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final scaleFactor = Provider.of<ScaleFactorProvider>(context).scaleFactor;
     pars.isEmpty ? _loadCourseData('') : null;
+
+    int numberOfHoles = 18;
+    if (selectedCourse == 'Cordova Bay Ridge Course') {
+      numberOfHoles = 9;
+    }
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 0, 120, 79),
@@ -1375,7 +1416,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: EdgeInsets.only(right: 20 * scaleFactor),
                   child: Row(
                     children: List.generate(
-                      18,
+                      numberOfHoles,
                       (index) {
                         return IgnorePointer(
                           ignoring: false,
@@ -1421,7 +1462,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                       : Radius.zero,
                                 ),
                               ),
-                              // color: Colors.white,
                               child: Center(
                                 child: Column(
                                   children: [
@@ -1466,9 +1506,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 5),
-                // if (skinsMode &&
-                //     Provider.of<CourseDataProvider>(context).playerCount >= 2)
-
                 if (teamMatchPlayMode &&
                     matchPlayMode &&
                     Provider.of<CourseDataProvider>(context).playerCount == 4)
@@ -1715,6 +1752,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                   final playerNames = snapshot.data!;
                                   return Column(
                                     children: [
+                                      if (addRowForFront9)
+                                        MatchPlayResultsRow9(
+                                          matchPlayResults:
+                                              matchPlayResultsPair1,
+                                          playerNames: [
+                                            playerNames[0] ?? 'Player 1',
+                                            playerNames[1] ?? 'Player 2',
+                                          ],
+                                        ),
                                       MatchPlayResultsRow(
                                         matchPlayResults: matchPlayResultsPair1,
                                         playerNames: [
@@ -1788,11 +1834,24 @@ class _HomeScreenState extends State<HomeScreen> {
                                       'Error loading player names');
                                 } else {
                                   final playerNames = snapshot.data!;
-                                  return MatchPlayResultsRow(
-                                    matchPlayResults: matchPlayResultsPair2,
-                                    playerNames: [
-                                      playerNames[0] ?? 'Player 3',
-                                      playerNames[1] ?? 'Player 4'
+                                  return Column(
+                                    children: [
+                                      if (addRowForFront9)
+                                        MatchPlayResultsRow9(
+                                          matchPlayResults:
+                                              matchPlayResultsPair2,
+                                          playerNames: [
+                                            playerNames[0] ?? 'Player 1',
+                                            playerNames[1] ?? 'Player 2',
+                                          ],
+                                        ),
+                                      MatchPlayResultsRow(
+                                        matchPlayResults: matchPlayResultsPair2,
+                                        playerNames: [
+                                          playerNames[0] ?? 'Player 3',
+                                          playerNames[1] ?? 'Player 4'
+                                        ],
+                                      ),
                                     ],
                                   );
                                 }
