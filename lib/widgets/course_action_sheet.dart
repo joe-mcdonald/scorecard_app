@@ -1,8 +1,10 @@
 import 'package:csv/csv.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:scorecard_app/course_data_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class CourseActionSheet extends StatefulWidget {
@@ -42,6 +44,33 @@ class CourseActionSheet extends StatefulWidget {
 }
 
 class _CourseActionSheetState extends State<CourseActionSheet> {
+  List<String> favoriteCourseFiles = [];
+
+  @override
+  void initState() {
+    super.initState();
+    loadFavoriteCourses();
+  }
+
+  Future<void> loadFavoriteCourses() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      favoriteCourseFiles = prefs.getStringList('favoriteCourses') ?? [];
+    });
+  }
+
+  Future<void> toggleFavoriteCourse(String courseFile) async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      if (favoriteCourseFiles.contains(courseFile)) {
+        favoriteCourseFiles.remove(courseFile);
+      } else {
+        favoriteCourseFiles.add(courseFile);
+      }
+      prefs.setStringList('favoriteCourses', favoriteCourseFiles);
+    });
+  }
+
   Future<void> _loadCourseData(String course, String courseName) async {
     final data = await rootBundle.loadString('assets/$course - Sheet1.csv');
     List<List<dynamic>> csvTable = const CsvToListConverter().convert(data);
@@ -100,26 +129,92 @@ class _CourseActionSheetState extends State<CourseActionSheet> {
     }
   }
 
-  CupertinoActionSheetAction _buildAction(
-      String courseFile, String courseName, String courseLocation) {
-    return CupertinoActionSheetAction(
-      onPressed: () {
-        _loadCourseData(courseFile, courseName);
+  Widget buildCourseRow(String file, String name, String location) {
+    bool isFavorite = favoriteCourseFiles.contains(file);
+    return GestureDetector(
+      onTap: () {
+        _loadCourseData(file, name);
         Navigator.pop(context);
       },
-      child: Column(
-        children: [
-          Text(courseName,
-              style: const TextStyle(
-                  fontSize: 20, color: CupertinoColors.systemBlue)),
-          Text(courseLocation, style: const TextStyle(fontSize: 12)),
-        ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        color: CupertinoColors.white,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Text column
+            Material(
+              color: Colors.transparent,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(name,
+                      style: const TextStyle(
+                          fontSize: 20, color: CupertinoColors.systemBlue)),
+                  Text(location,
+                      style: const TextStyle(
+                          fontSize: 12, color: CupertinoColors.systemGrey)),
+                ],
+              ),
+            ),
+            // Star icon (independently tappable)
+            GestureDetector(
+              onTap: () async => await toggleFavoriteCourse(file),
+              behavior: HitTestBehavior.translucent,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 8.0),
+                child: Icon(
+                  isFavorite ? CupertinoIcons.star_fill : CupertinoIcons.star,
+                  color: CupertinoColors.systemYellow,
+                  size: 24,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final allCourses = [
+      ['baileyranchgolfclub', 'Bailey Ranch Golf Club', 'Owasso, Oklahoma'],
+      ['bandondunes', 'Bandon Dunes', 'Bandon, Oregon'],
+      ['bandontrails', 'Bandon Trails', 'Bandon, Oregon'],
+      ['beachgrovegolfclub', 'Beach Grove Golf Club', 'Tsawwassen, BC'],
+      ['bigskygolfclub', 'Big Sky Golf Club', 'Pemberton, BC'],
+      ['calclub', 'Cal Club', 'San Francisco, CA'],
+      ['cordovabaygolfcourse', 'Cordova Bay Golf Course', 'Victoria, BC'],
+      ['cordovabayridgecourse', 'Cordova Bay Ridge Course', 'Victoria, BC'],
+      ['chateaufairmontwhistler', 'Chateau Fairmont Whistler', 'Whistler, BC'],
+      ['desertfalls', 'Desert Falls', 'Palm Desert, CA'],
+      ['eaglefalls', 'Eagle Falls', 'Palm Desert, CA'],
+      ['highlandpacificgolfcourse', 'Highland Pacific', 'Victoria, BC'],
+      ['marinedrivegolfclub', 'Marine Drive Golf Club', 'Vancouver, BC'],
+      ['mcleerygolfcourse', 'McLeery Golf Course', 'Vancouver, BC'],
+      ['morgancreekgolfcourse', 'Morgan Creek Golf Course', 'Surrey, BC'],
+      ['musqueamgolfcourse', 'Musqueam Golf Course', 'Vancouver, BC'],
+      ['nicklausnorthgolfclub', 'Nicklaus North Golf Club', 'Whistler, BC'],
+      ['oldmacdonald', 'Old MacDonald', 'Bandon, Oregon'],
+      ['pacificdunes', 'Pacific Dunes', 'Bandon, Oregon'],
+      ['pheasantglengolfresort', 'Pheasant Glen Golf Resort', 'Nanaimo, BC'],
+      ['pointgreyg&cc', 'Point Grey G&CC', 'Vancouver, BC'],
+      ['royalcolwoodgolfclub', 'Royal Colwood Golf Club', 'Colwood, BC'],
+      ['shaughnessyg&cc', 'Shaughnessy G&CC', 'Vancouver, BC'],
+      ['sheepranch', 'Sheep Ranch', 'Bandon, Oregon'],
+      ['universitygolfclub', 'University Golf Club', 'Vancouver, BC'],
+      ['victoriagolfclub', 'Victoria Golf Club', 'Victoria, BC'],
+      ['whistlergolfclub', 'Whistler Golf Club', 'Whistler, BC'],
+    ];
+
+    final favoriteCourses = allCourses
+        .where((course) => favoriteCourseFiles.contains(course[0]))
+        .toList();
+    final regularCourses = allCourses
+        .where((course) => !favoriteCourseFiles.contains(course[0]))
+        .toList();
+
     return SizedBox(
       height: 435,
       child: CupertinoActionSheet(
@@ -128,49 +223,21 @@ class _CourseActionSheetState extends State<CourseActionSheet> {
         message: const Text('Select a course.',
             style: TextStyle(fontSize: 20, color: CupertinoColors.systemGrey)),
         actions: [
-          _buildAction('baileyranchgolfclub', 'Bailey Ranch Golf Club',
-              'Owasso, Oklahoma'),
-          _buildAction('bandondunes', 'Bandon Dunes', 'Bandon, Oregon'),
-          _buildAction('bandontrails', 'Bandon Trails', 'Bandon, Oregon'),
-          _buildAction(
-              'beachgrovegolfclub', 'Beach Grove Golf Club', 'Tsawwassen, BC'),
-          _buildAction('bigskygolfclub', 'Big Sky Golf Club', 'Pemberton, BC'),
-          _buildAction('calclub', 'Cal Club', 'San Francisco, CA'),
-          _buildAction('cordovabaygolfcourse', 'Cordova Bay Golf Course',
-              'Victoria, BC'),
-          _buildAction('cordovabayridgecourse', 'Cordova Bay Ridge Course',
-              'Victoria, BC'),
-          _buildAction('chateaufairmontwhistler', 'Chateau Fairmont Whistler',
-              'Whistler, BC'),
-          _buildAction('desertfalls', 'Desert Falls', 'Palm Desert, CA'),
-          _buildAction('eaglefalls', 'Eagle Falls', 'Palm Desert, CA'),
-          _buildAction('highlandpacificgolfcourse',
-              'Highland Pacific Golf Course', 'Victoria, BC'),
-          _buildAction(
-              'marinedrivegolfclub', 'Marine Drive Golf Club', 'Vancouver, BC'),
-          _buildAction(
-              'mcleerygolfcourse', 'McLeery Golf Course', 'Vancouver, BC'),
-          _buildAction('morgancreekgolfcourse', 'Morgan Creek Golf Course',
-              'Surrey, BC'),
-          _buildAction(
-              'musqueamgolfcourse', 'Musqueam Golf Course', 'Vancouver, BC'),
-          _buildAction('nicklausnorthgolfclub', 'Nicklaus North Golf Club',
-              'Whistler, BC'),
-          _buildAction('oldmacdonald', 'Old MacDonald', 'Bandon, Oregon'),
-          _buildAction('pacificdunes', 'Pacific Dunes', 'Bandon, Oregon'),
-          _buildAction('pheasantglengolfresort', 'Pheasant Glen Golf Resort',
-              'Nanaimo, BC'),
-          _buildAction('pointgreyg&cc', 'Point Grey G&CC', 'Vancouver, BC'),
-          _buildAction(
-              'royalcolwoodgolfclub', 'Royal Colwood Golf Club', 'Colwood, BC'),
-          _buildAction('shaughnessyg&cc', 'Shaughnessy G&CC', 'Vancouver, BC'),
-          _buildAction('sheepranch', 'Sheep Ranch', 'Bandon, Oregon'),
-          _buildAction(
-              'universitygolfclub', 'University Golf Club', 'Vancouver, BC'),
-          _buildAction(
-              'victoriagolfclub', 'Victoria Golf Club', 'Victoria, BC'),
-          _buildAction(
-              'whistlergolfclub', 'Whistler Golf Club', 'Whistler, BC'),
+          ...favoriteCourses.map((course) => buildCourseRow(
+                course[0],
+                course[1],
+                course[2],
+              )),
+          if (favoriteCourses.isNotEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Divider(height: 1),
+            ),
+          ...regularCourses.map((course) => buildCourseRow(
+                course[0],
+                course[1],
+                course[2],
+              )),
           CupertinoActionSheetAction(
             onPressed: () {
               _requestCourse();

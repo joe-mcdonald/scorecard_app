@@ -207,7 +207,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     GestureDetector(
-                      child: const Text('Add For For Front 9',
+                      child: const Text('Add Match For Front 9',
                           style: TextStyle(fontSize: 20)),
                     ),
                     CupertinoSwitch(

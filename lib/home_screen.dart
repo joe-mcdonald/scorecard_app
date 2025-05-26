@@ -77,6 +77,8 @@ class _HomeScreenState extends State<HomeScreen> {
   List<int> matchPlayResults = List.generate(18, (index) => 0);
   List<int> matchPlayResultsPair1 = List.generate(18, (index) => 0);
   List<int> matchPlayResultsPair2 = List.generate(18, (index) => 0);
+  List<int> matchPlayResultsPair1Back9 = List.generate(9, (index) => 0);
+  List<int> matchPlayResultsPair2Back9 = List.generate(9, (index) => 0);
 
   List<int> pressStartHoles = [];
   List<List<int>> pressMatchPlayResults = [];
@@ -361,6 +363,8 @@ class _HomeScreenState extends State<HomeScreen> {
       matchPlayResults = List.generate(18, (index) => 0);
       matchPlayResultsPair1 = List.generate(18, (index) => 0);
       matchPlayResultsPair2 = List.generate(18, (index) => 0);
+      matchPlayResultsPair1Back9 = List.generate(9, (index) => 0);
+      matchPlayResultsPair2Back9 = List.generate(9, (index) => 0);
       hasSeenMatchPlayWinDialog = false;
 
       // Update course and tee selection
@@ -489,12 +493,14 @@ class _HomeScreenState extends State<HomeScreen> {
     int netStrokes = player1Handicap - player2Handicap;
 
     matchPlayResultsPair1 = List.generate(18, (index) => 0);
+    matchPlayResultsPair1Back9 = List.generate(9, (index) => 0);
 
     for (int i = 0; i < 18; i++) {
       final player1Score = await dbHelper.getScoreForHole(0, i);
       final player2Score = await dbHelper.getScoreForHole(1, i);
       if (player1Score == 0 || player2Score == 0) {
         matchPlayResultsPair1[i] = 0;
+        // matchPlayResultsPair1Back9[i] = 0;
         setState(() {});
         return;
       }
@@ -553,20 +559,20 @@ class _HomeScreenState extends State<HomeScreen> {
         } else {
           if ((player1Score < player2Score)) {
             //playerindex 0 holeindex i < playerindex 1 holeindex i
-            if (i == 0 || i == 9) {
+            if (i == 0) {
               matchPlayResultsPair1[i] = -1; //negative == player 1 lead
             } else {
               matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1] - 1;
             }
           } else if (player1Score > (player2Score)) {
             //playerindex 0 holeindex i > playerindex 1 holeindex i
-            if (i == 0 || i == 9) {
+            if (i == 0) {
               matchPlayResultsPair1[i] = 1; //positive  == player 2 lead
             } else {
               matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1] + 1;
             }
           } else {
-            if (i == 0 || i == 9) {
+            if (i == 0) {
               matchPlayResultsPair1[i] = 0; //tie == nothing changes
             } else {
               matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1];
@@ -577,6 +583,33 @@ class _HomeScreenState extends State<HomeScreen> {
         matchPlayResultsPair1[i] = 0;
       }
     }
+
+    for (int i = 0; i < 9; i++) {
+      final player1Score = await dbHelper.getScoreForHole(0, i + 9);
+      final player2Score = await dbHelper.getScoreForHole(1, i + 9);
+      if ((player1Score < player2Score)) {
+        //playerindex 0 holeindex i < playerindex 1 holeindex i
+        if (i == 0) {
+          matchPlayResultsPair1Back9[i] = -1; //negative == player 1 lead
+        } else {
+          matchPlayResultsPair1Back9[i] = matchPlayResultsPair1Back9[i - 1] - 1;
+        }
+      } else if (player1Score > (player2Score)) {
+        //playerindex 0 holeindex i > playerindex 1 holeindex i
+        if (i == 0) {
+          matchPlayResultsPair1Back9[i] = 1; //positive  == player 2 lead
+        } else {
+          matchPlayResultsPair1Back9[i] = matchPlayResultsPair1Back9[i - 1] + 1;
+        }
+      } else {
+        if (i == 0) {
+          matchPlayResultsPair1Back9[i] = 0; //tie == nothing changes
+        } else {
+          matchPlayResultsPair1Back9[i] = matchPlayResultsPair1Back9[i - 1];
+        }
+      }
+    }
+
     // Trigger a rebuild to display the results
     if (presses.isNotEmpty) {
       for (int startHole in pressStartHoles) {
@@ -1755,7 +1788,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       if (addRowForFront9)
                                         MatchPlayResultsRow9(
                                           matchPlayResults:
-                                              matchPlayResultsPair1,
+                                              matchPlayResultsPair1Back9,
                                           playerNames: [
                                             playerNames[0] ?? 'Player 1',
                                             playerNames[1] ?? 'Player 2',
@@ -1841,8 +1874,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                           matchPlayResults:
                                               matchPlayResultsPair2,
                                           playerNames: [
-                                            playerNames[0] ?? 'Player 1',
-                                            playerNames[1] ?? 'Player 2',
+                                            playerNames[0] ?? 'Player 3',
+                                            playerNames[1] ?? 'Player 4',
                                           ],
                                         ),
                                       MatchPlayResultsRow(

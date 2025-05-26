@@ -24,38 +24,54 @@ class MatchPlayResultsRow9 extends StatelessWidget {
     String backWinnerName = '';
     String totalWinnerName = '';
     if (matchPlayResults[8] - matchPlayResults[0] > 0) {
-      frontWinnerName = playerNames[1];
-    } else if (matchPlayResults[8] - matchPlayResults[0] < 0) {
-      frontWinnerName = playerNames[0];
-    } else {
-      frontWinnerName = 'Tie';
-    }
-    if (matchPlayResults[17] - matchPlayResults[9] > 0) {
       backWinnerName = playerNames[1];
-    } else if (matchPlayResults[17] - matchPlayResults[9] < 0) {
+    } else if (matchPlayResults[8] - matchPlayResults[0] < 0) {
       backWinnerName = playerNames[0];
     } else {
       backWinnerName = 'Tie';
     }
-    if (((matchPlayResults[17] - matchPlayResults[9]) +
-            (matchPlayResults[8] - matchPlayResults[0])) >
-        0) {
-      totalWinnerName = playerNames[1];
-    } else if (((matchPlayResults[17] - matchPlayResults[9]) +
-            (matchPlayResults[8] - matchPlayResults[0])) <
-        0) {
-      totalWinnerName = playerNames[0];
-    } else {
-      totalWinnerName = 'Tie';
-    }
+    // if (((matchPlayResults[17] - matchPlayResults[9]) +
+    //         (matchPlayResults[8] - matchPlayResults[0])) >
+    //     0) {
+    //   totalWinnerName = playerNames[1];
+    // } else if (((matchPlayResults[17] - matchPlayResults[9]) +
+    //         (matchPlayResults[8] - matchPlayResults[0])) <
+    //     0) {
+    //   totalWinnerName = playerNames[0];
+    // } else {
+    //   totalWinnerName = 'Tie';
+    // }
 
     return Row(
       children: [
+        ...List.generate(
+          9,
+          (index) {
+            return Container(
+              width: 100 * scaleFactor,
+              height: 80 * scaleFactor,
+              margin: EdgeInsets.all(2 * scaleFactor),
+              child: const Center(
+                child: SizedBox(
+                  width: double.infinity,
+                  height: double.infinity,
+                  child: Center(
+                    child: Column(
+                      children: [
+                        SizedBox(height: 4),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
         Container(
           padding: EdgeInsets.only(right: 0 * scaleFactor),
           margin: EdgeInsets.all(2 * scaleFactor),
           decoration: const BoxDecoration(
-            color: const Color.fromARGB(255, 243, 243, 243),
+            color: Color.fromARGB(255, 243, 243, 243),
             borderRadius: BorderRadius.only(
               topRight: Radius.circular(12),
               bottomRight: Radius.circular(12),
@@ -71,7 +87,7 @@ class MatchPlayResultsRow9 extends StatelessWidget {
                   height: scaleFactor * 70,
                   child: const Center(
                     child: Text(
-                      'Front\n9',
+                      'Back\n9',
                       style: TextStyle(color: Colors.black, fontSize: 23),
                       textAlign: TextAlign.center,
                     ),
@@ -155,7 +171,7 @@ class MatchPlayResultsRow9 extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               AutoSizeText(
-                'Front:\n$frontWinnerName',
+                'Back:\n$backWinnerName',
                 style: const TextStyle(
                   color: Colors.black,
                   fontSize: 23,
@@ -167,26 +183,6 @@ class MatchPlayResultsRow9 extends StatelessWidget {
             ],
           ),
         ),
-        ...List.generate(9, (index) {
-          return Container(
-            width: 100 * scaleFactor,
-            height: 80 * scaleFactor,
-            margin: EdgeInsets.all(2 * scaleFactor),
-            child: const Center(
-              child: SizedBox(
-                width: double.infinity,
-                height: double.infinity,
-                child: Center(
-                  child: Column(
-                    children: [
-                      SizedBox(height: 4),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
       ],
     );
   }

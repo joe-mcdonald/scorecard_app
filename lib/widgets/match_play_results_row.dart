@@ -81,75 +81,69 @@ class MatchPlayResultsRow extends StatelessWidget {
             ),
           ),
         ),
-        ...List.generate(18, (index) {
-          return GestureDetector(
-            onLongPress: () {
-              if (onLongPress != null && index != 0) {
-                onLongPress!(index);
-              }
-            },
-            child: Container(
-              width: 100 * scaleFactor,
-              height: 80 * scaleFactor,
-              margin: EdgeInsets.all(2 * scaleFactor),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: index == 0 ? const Radius.circular(12) : Radius.zero,
-                  bottomLeft:
-                      index == 0 ? const Radius.circular(12) : Radius.zero,
+        ...List.generate(
+          18,
+          (index) {
+            return GestureDetector(
+              onLongPress: () {
+                if (onLongPress != null && index != 0) {
+                  onLongPress!(index);
+                }
+              },
+              child: Container(
+                width: 100 * scaleFactor,
+                height: 80 * scaleFactor,
+                margin: EdgeInsets.all(2 * scaleFactor),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft:
+                        index == 0 ? const Radius.circular(12) : Radius.zero,
+                    bottomLeft:
+                        index == 0 ? const Radius.circular(12) : Radius.zero,
+                  ),
                 ),
-              ),
-              child: Center(
-                child: SizedBox(
-                  width: double.infinity,
-                  height: double.infinity,
-                  child: Center(
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 4),
-                        Text(
-                          matchPlayResults[index].abs().toString(),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            // color: matchPlayResults[index] < 0
-                            //     ? Colors.red
-                            //     : matchPlayResults[index] > 0
-                            //         ? const Color.fromARGB(198, 0, 0, 255)
-                            //         : Colors.black,
-                            fontSize: 35,
-                            fontWeight: FontWeight.bold,
+                child: Center(
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: double.infinity,
+                    child: Center(
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 4),
+                          Text(
+                            matchPlayResults[index].abs().toString(),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 35,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        Text(
-                          matchPlayResults[index] < 0
-                              ? playerNames[0] == ''
-                                  ? 'Player 1'
-                                  : playerNames[0]
-                              : matchPlayResults[index] > 0
-                                  ? playerNames[1] == ''
-                                      ? 'Player 2'
-                                      : playerNames[1]
-                                  : 'Tie',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            // color: matchPlayResults[index] < 0
-                            //     ? Colors.red
-                            //     : matchPlayResults[index] > 0
-                            //         ? const Color.fromARGB(198, 0, 0, 255)
-                            //         : Colors.black,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                          Text(
+                            matchPlayResults[index] < 0
+                                ? playerNames[0] == ''
+                                    ? 'Player 1'
+                                    : playerNames[0]
+                                : matchPlayResults[index] > 0
+                                    ? playerNames[1] == ''
+                                        ? 'Player 2'
+                                        : playerNames[1]
+                                    : 'Tie',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          );
-        }),
+            );
+          },
+        ),
         Container(
           width: 100 * scaleFactor,
           height: 81 * scaleFactor,
@@ -165,7 +159,7 @@ class MatchPlayResultsRow extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               AutoSizeText(
-                'F: ${frontWinnerName}',
+                'F: $frontWinnerName',
                 style: const TextStyle(
                   color: Colors.black,
                   fontSize: 18,
