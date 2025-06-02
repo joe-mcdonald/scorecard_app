@@ -20,9 +20,7 @@ class MatchPlayResultsRow9 extends StatelessWidget {
     final scaleFactor =
         Provider.of<ScaleFactorProvider>(context, listen: false).scaleFactor;
 
-    String frontWinnerName = '';
     String backWinnerName = '';
-    String totalWinnerName = '';
     if (matchPlayResults[8] - matchPlayResults[0] > 0) {
       backWinnerName = playerNames[1];
     } else if (matchPlayResults[8] - matchPlayResults[0] < 0) {
@@ -87,7 +85,7 @@ class MatchPlayResultsRow9 extends StatelessWidget {
                   height: scaleFactor * 70,
                   child: const Center(
                     child: Text(
-                      'Back\n9',
+                      'Back',
                       style: TextStyle(color: Colors.black, fontSize: 23),
                       textAlign: TextAlign.center,
                     ),

@@ -71,8 +71,8 @@ class MatchPlayResultsRow extends StatelessWidget {
                   height: scaleFactor * 70,
                   child: const Center(
                     child: Text(
-                      'Full\n18',
-                      style: TextStyle(color: Colors.black, fontSize: 23),
+                      'Front\n& Long',
+                      style: TextStyle(color: Colors.black, fontSize: 21),
                       textAlign: TextAlign.center,
                     ),
                   ),
