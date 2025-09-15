@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:scorecard_app/home_screen.dart';
 import 'package:scorecard_app/scale_factor_provider.dart';
 import 'package:scorecard_app/widgets/slide_left_route.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -48,6 +49,15 @@ class _SettingsPageState extends State<SettingsPage> {
     });
   }
 
+  void _launchBuyMeACoffee() async {
+    const url = 'https://www.buymeacoffee.com/joemcdonald';
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } else {
+      throw 'Could not launch $url';
+    }
+  }
+
   Future<void> _saveFairwayGreen(bool showFairwayGreenValue) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('showFairwayGreen', showFairwayGreenValue);
@@ -56,11 +66,6 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _saveShowPuttsPerHole(bool showPuttsPerHoleValue) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('showPuttsPerHole', showPuttsPerHoleValue);
-  }
-
-  Future<void> _saveMensHandicap(bool showMensHandicapValue) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('mensHandicap', showMensHandicapValue);
   }
 
   Future<void> _saveMatchPlayMode(bool matchPlayModeValue) async {
@@ -76,11 +81,6 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _saveAddRowForFront9(bool addRowForFront9Value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('addRowForFront9', addRowForFront9Value);
-  }
-
-  Future<void> _saveMatchPlayFormat(String matchPlayFormatValue) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('matchPlayFormat', matchPlayFormatValue);
   }
 
   Future<void> _saveSkinsMode(bool skinsModeValue) async {
@@ -222,82 +222,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   ],
                 ),
               ),
-            // if (matchPlayMode)
-            //   CupertinoFormRow(
-            //     padding: EdgeInsets.zero,
-            //     child: Row(
-            //       children: [
-            //         const SizedBox(width: 19),
-            //         const Text(
-            //           'Match Play Format',
-            //           style: TextStyle(
-            //             fontSize: 20,
-            //             overflow: TextOverflow.ellipsis,
-            //           ),
-            //         ),
-            //         const Spacer(),
-            //         CupertinoButton(
-            //           child: matchPlayFormat.isEmpty
-            //               ? const Text(
-            //                   '    ',
-            //                   style: TextStyle(
-            //                     fontSize: 20,
-            //                     color: Colors.black,
-            //                   ),
-            //                 )
-            //               : AutoSizeText(
-            //                   matchPlayFormat,
-            //                   style: const TextStyle(
-            //                     color: Colors.black,
-            //                   ),
-            //                   maxFontSize: 20,
-            //                   overflow: TextOverflow.ellipsis,
-            //                 ),
-            //           onPressed: () => showCupertinoModalPopup<void>(
-            //             context: context,
-            //             builder: (BuildContext context) => CupertinoActionSheet(
-            //               actions: <CupertinoActionSheetAction>[
-            //                 CupertinoActionSheetAction(
-            //                   onPressed: () {
-            //                     matchPlayFormat = 'Four Ball';
-            //                     setState(() {
-            //                       _saveMatchPlayFormat(matchPlayFormat);
-            //                     });
-            //                     Navigator.pop(context);
-            //                   },
-            //                   child: const Text(
-            //                     'Four Ball',
-            //                     style: TextStyle(
-            //                       fontSize: 20,
-            //                       color: Colors.black,
-            //                       overflow: TextOverflow.ellipsis,
-            //                     ),
-            //                   ),
-            //                 ),
-            //                 CupertinoActionSheetAction(
-            //                   onPressed: () {
-            //                     matchPlayFormat = 'Alternate Shot';
-            //                     setState(() {
-            //                       _saveMatchPlayFormat(matchPlayFormat);
-            //                     });
-            //                     Navigator.pop(context);
-            //                   },
-            //                   child: const Text(
-            //                     'Alternate Shot',
-            //                     style: TextStyle(
-            //                       fontSize: 15,
-            //                       color: Colors.black,
-            //                       overflow: TextOverflow.ellipsis,
-            //                     ),
-            //                   ),
-            //                 ),
-            //               ],
-            //             ),
-            //           ),
-            //         ),
-            //       ],
-            //     ),
-            //   ),
             if (matchPlayMode == false)
               CupertinoFormRow(
                 child: Row(
@@ -420,26 +344,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 ],
               ),
             ),
-            // CupertinoFormRow(
-            //   child: Row(
-            //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            //     children: [
-            //       const Text(
-            //         'Mens Handicap',
-            //         style: TextStyle(fontSize: 20),
-            //       ),
-            //       CupertinoSwitch(
-            //         value: showMensHandicap,
-            //         onChanged: (bool showMensHandicapValue) {
-            //           showMensHandicap = showMensHandicapValue;
-            //           setState(() {
-            //             _saveMensHandicap(showMensHandicapValue);
-            //           });
-            //         },
-            //       ),
-            //     ],
-            //   ),
-            // ),
             CupertinoFormRow(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -462,6 +366,17 @@ class _SettingsPageState extends State<SettingsPage> {
                 ],
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: InkWell(
+                onTap: _launchBuyMeACoffee,
+                child: Image.network(
+                  'https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png',
+                  width: 200,
+                  height: 60,
+                ),
+              ),
+            )
           ],
         ),
       ),
