@@ -186,7 +186,6 @@ class _CourseActionSheetState extends State<CourseActionSheet> {
       ['bigskygolfclub', 'Big Sky Golf Club', 'Pemberton, BC'],
       ['calclub', 'Cal Club', 'San Francisco, CA'],
       ['cordovabaygolfcourse', 'Cordova Bay Golf Course', 'Victoria, BC'],
-      ['cordovabayridgecourse', 'Cordova Bay Ridge Course', 'Victoria, BC'],
       ['chateaufairmontwhistler', 'Chateau Fairmont Whistler', 'Whistler, BC'],
       ['desertfalls', 'Desert Falls', 'Palm Desert, CA'],
       ['eaglefalls', 'Eagle Falls', 'Palm Desert, CA'],

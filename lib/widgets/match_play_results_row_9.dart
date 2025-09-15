@@ -28,17 +28,6 @@ class MatchPlayResultsRow9 extends StatelessWidget {
     } else {
       backWinnerName = 'Tie';
     }
-    // if (((matchPlayResults[17] - matchPlayResults[9]) +
-    //         (matchPlayResults[8] - matchPlayResults[0])) >
-    //     0) {
-    //   totalWinnerName = playerNames[1];
-    // } else if (((matchPlayResults[17] - matchPlayResults[9]) +
-    //         (matchPlayResults[8] - matchPlayResults[0])) <
-    //     0) {
-    //   totalWinnerName = playerNames[0];
-    // } else {
-    //   totalWinnerName = 'Tie';
-    // }
 
     return Row(
       children: [

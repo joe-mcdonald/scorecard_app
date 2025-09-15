@@ -45,7 +45,7 @@ class SkinsRow extends StatelessWidget {
                   child: Center(
                     child: Text(
                       skinValue[index].toString(),
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.black,
                         fontSize: 30,
                       ),

@@ -20,6 +20,7 @@ import 'package:scorecard_app/widgets/player_row.dart';
 import 'package:scorecard_app/widgets/putts_row.dart';
 import 'package:scorecard_app/widgets/settings_page.dart';
 import 'package:scorecard_app/widgets/skins_row.dart';
+import 'package:scorecard_app/widgets/skins_results_overlay.dart';
 import 'package:scorecard_app/widgets/team_match_play_results_row.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -91,6 +92,38 @@ class _HomeScreenState extends State<HomeScreen> {
   List<List<bool>> skinsWonByHole =
       List.generate(4, (_) => List.filled(18, false));
 
+  @override
+  void initState() {
+    super.initState();
+    _loadPlayers();
+    _loadCourseData(selectedCourse);
+    _loadRecentCourse();
+    _loadSettings();
+    _loadStats();
+    _calculateMatchPlayScores();
+    _loadPressData();
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    for (var focusNode in puttsFocusNodes) {
+      focusNode.dispose();
+    }
+    for (var focusNodes in playersFocusNodes) {
+      for (var focusNode in focusNodes) {
+        focusNode.dispose();
+      }
+    }
+    for (var playerControllers in playersControllers) {
+      for (var controller in playerControllers) {
+        controller.dispose();
+      }
+    }
+    super.dispose();
+  }
+
   Future<void> _startPress(int holeIndex) async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -160,38 +193,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Timer? _debounce;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadPlayers();
-    _loadCourseData(selectedCourse);
-    _loadRecentCourse();
-    _loadSettings();
-    _loadStats();
-    _calculateMatchPlayScores();
-    _loadPressData();
-    setState(() {});
-  }
-
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    for (var focusNode in puttsFocusNodes) {
-      focusNode.dispose();
-    }
-    for (var focusNodes in playersFocusNodes) {
-      for (var focusNode in focusNodes) {
-        focusNode.dispose();
-      }
-    }
-    for (var playerControllers in playersControllers) {
-      for (var controller in playerControllers) {
-        controller.dispose();
-      }
-    }
-    super.dispose();
-  }
 
   Future<void> _saveStats() async {
     final prefs = await SharedPreferences.getInstance();
@@ -402,11 +403,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _shareRoundDetails() async {
-    String details = await _formatRoundDetails();
-    Share.share(details, subject: 'Golf Round Details');
-  }
-
-  Future<String> _formatRoundDetails() async {
     StringBuffer details = StringBuffer();
 
     details.writeln('Golf Round Details:');
@@ -432,8 +428,6 @@ class _HomeScreenState extends State<HomeScreen> {
         }
         totalScore += score;
       }
-      // String scoresString =
-      //     scores.map((score) => score == 0 ? '' : score.toString()).join(', ');
 
       details.writeln('Player: $playerName');
       details.writeln('Front: $frontScore');
@@ -442,21 +436,8 @@ class _HomeScreenState extends State<HomeScreen> {
       details.writeln('');
     }
 
-    // if (showPutterRow) {
-    //   int totalPutts = 0;
-    //   for (int holeIndex = 0; holeIndex < 18; holeIndex++) {
-    //     totalPutts += await dbHelper.getPuttsForHole(holeIndex);
-    //   }
-    //   details.writeln('Putts: $totalPutts');
-    //   details.writeln('');
-    // }
-
-    // print(details.toString());
-    return details.toString();
-  }
-
-  bool isHandicapHole(int index, int handicapDifference) {
-    return mensHcap[index] <= handicapDifference.abs();
+    // return details.toString();
+    Share.share(details.toString(), subject: 'Golf Round Details');
   }
 
   Future<void> _loadSettings() async {
@@ -1031,25 +1012,6 @@ class _HomeScreenState extends State<HomeScreen> {
     // setState(() {});
   }
 
-  // void _showWinDialog(String title, String message) {
-  //   showCupertinoDialog(
-  //     context: context,
-  //     builder: (BuildContext context) => CupertinoAlertDialog(
-  //       title: Text(title),
-  //       content: Text(message),
-  //       actions: <CupertinoDialogAction>[
-  //         CupertinoDialogAction(
-  //           child: const Text('OK'),
-  //           onPressed: () {
-  //             Navigator.of(context).pop();
-  //           },
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  //   hasSeenMatchPlayWinDialog = true;
-  // }
-
   Future<void> _calculateTeamMatchPlayFourBall() async {
     final playerCount = await dbHelper.getPlayerCount();
     if (playerCount < 4) return;
@@ -1216,74 +1178,6 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {});
   }
 
-  // Future<void> _calculateTeamMatchPlayAlternateShot() async {
-  //   final playerCount = await dbHelper.getPlayerCount();
-  //   if (playerCount < 4) return;
-  //   int player1Handicap = (await dbHelper.getHandicap(0)) ?? 0;
-  //   int player2Handicap = (await dbHelper.getHandicap(1)) ?? 0;
-  //   int player3Handicap = (await dbHelper.getHandicap(2)) ?? 0;
-  //   int player4Handicap = (await dbHelper.getHandicap(3)) ?? 0;
-  //   // Find the lowest handicap among all players
-  //   int lowestHandicap = [
-  //     player1Handicap,
-  //     player2Handicap,
-  //     player3Handicap,
-  //     player4Handicap
-  //   ].reduce((a, b) => a < b ? a : b);
-  //   // Calculate the strokes each player receives
-  //   int netStrokesPlayer1 = player1Handicap - lowestHandicap;
-  //   int netStrokesPlayer2 = player2Handicap - lowestHandicap;
-  //   int netStrokesPlayer3 = player3Handicap - lowestHandicap;
-  //   int netStrokesPlayer4 = player4Handicap - lowestHandicap;
-  //   matchPlayResults = List.generate(18, (index) => 0);
-  //   for (int i = 0; i < 18; i++) {
-  //     final player1Score = await dbHelper.getScoreForHole(0, i);
-  //     final player2Score = await dbHelper.getScoreForHole(1, i);
-  //     final player3Score = await dbHelper.getScoreForHole(2, i);
-  //     final player4Score = await dbHelper.getScoreForHole(3, i);
-  //     // Check if any of the scores are missing
-  //     if (player1Score == 0 &&
-  //         player2Score == 0 &&
-  //         player3Score == 0 &&
-  //         player4Score == 0) {
-  //       matchPlayResults[i] = 0;
-  //       continue;
-  //     }
-  //     // Determine if the current hole is a handicap hole
-  //     // final isHandicapHole = mensHandicap ? mensHcap[i] : womensHcap[i];
-  //     final isHandicapHole = mensHcap[i];
-  //     // Calculate the net scores considering the alternate shot format
-  //     final netScoreTeam1 = (i % 2 == 0)
-  //         ? player1Score - (netStrokesPlayer1 >= isHandicapHole ? 1 : 0)
-  //         : player2Score - (netStrokesPlayer2 >= isHandicapHole ? 1 : 0);
-  //     final netScoreTeam2 = (i % 2 == 0)
-  //         ? player3Score - (netStrokesPlayer3 >= isHandicapHole ? 1 : 0)
-  //         : player4Score - (netStrokesPlayer4 >= isHandicapHole ? 1 : 0);
-  //     // Determine the result for the hole
-  //     if (netScoreTeam1 < netScoreTeam2) {
-  //       matchPlayResults[i] = (i == 0) ? -1 : matchPlayResults[i - 1] - 1;
-  //     } else if (netScoreTeam1 > netScoreTeam2) {
-  //       matchPlayResults[i] = (i == 0) ? 1 : matchPlayResults[i - 1] + 1;
-  //     } else {
-  //       matchPlayResults[i] = (i == 0) ? 0 : matchPlayResults[i - 1];
-  //     }
-  //     // Check for early match win
-  //     if (!hasSeenMatchPlayWinDialog && i > 8) {
-  //       int team1Wins = matchPlayResults.where((result) => result < 0).length;
-  //       int team2Wins = matchPlayResults.where((result) => result > 0).length;
-  //       if (team1Wins >= 10) {
-  //         _showWinDialog('Team 1 Wins!', 'Team 1 has won the match play.');
-  //         break;
-  //       } else if (team2Wins >= 10) {
-  //         _showWinDialog('Team 2 Wins!', 'Team 2 has won the match play.');
-  //         break;
-  //       }
-  //     }
-  //   }
-  //   // Trigger a rebuild to display the results
-  //   setState(() {});
-  // }
-
   Future<bool> isStrokeHole(int hole, int playerIndex) async {
     // if playercount is 1 return false
     if (Provider.of<CourseDataProvider>(context).playerCount == 1) {
@@ -1299,21 +1193,13 @@ class _HomeScreenState extends State<HomeScreen> {
         int player1Handicap = await dbHelper.getHandicap(0) ?? 0;
         int player2Handicap = await dbHelper.getHandicap(1) ?? 0;
         int handicapDifference = player1Handicap - player2Handicap;
-        // if (mensHandicap) {
         return mensHcap[hole] <= handicapDifference;
-        // } else {
-        //   return womensHcap[hole] <= handicapDifference;
-        // }
       } else if (playerIndex == 1) {
         // if player 2
         int player1Handicap = await dbHelper.getHandicap(0) ?? 0;
         int player2Handicap = await dbHelper.getHandicap(1) ?? 0;
         int handicapDifference = player2Handicap - player1Handicap;
-        // if (mensHandicap) {
         return mensHcap[hole] <= handicapDifference;
-        // } else {
-        //   return womensHcap[hole] <= handicapDifference;
-        // }
       } else {
         return false; // if there are 3 players, the 3rd player isnt involved so return false
       }
@@ -1511,115 +1397,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   OverlayEntry? _skinsOverlay;
 
-  void _showSkinsOverlay(BuildContext context) async {
+  void _showSkinsOverlay(BuildContext context) {
     final overlay = Overlay.of(context);
 
-    _skinsOverlay = OverlayEntry(
-      builder: (context) => FutureBuilder<List<String>>(
-        future: _fetchPlayerNames(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else {
-            final playerNames = snapshot.data ?? [];
-            return Stack(
-              children: [
-                Positioned.fill(
-                  child: Container(
-                    color: Colors.black54,
-                  ),
-                ),
-                Center(
-                  child: SizedBox(
-                    width: 300,
-                    child: Material(
-                      color: Colors.white,
-                      elevation: 8,
-                      borderRadius: BorderRadius.circular(10),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              'Skins Results',
-                              style: TextStyle(
-                                fontSize: 30,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  playerNames[0],
-                                  style: const TextStyle(fontSize: 20),
-                                ),
-                                Text(
-                                  '\$${skinsWon[0]}',
-                                  style: const TextStyle(fontSize: 20),
-                                ),
-                              ],
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  playerNames[1],
-                                  style: const TextStyle(fontSize: 20),
-                                ),
-                                Text(
-                                  '\$${skinsWon[1]}',
-                                  style: const TextStyle(fontSize: 20),
-                                ),
-                              ],
-                            ),
-                            if (playersControllers.length >= 3)
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    playerNames[2],
-                                    style: const TextStyle(fontSize: 20),
-                                  ),
-                                  Text(
-                                    '\$${skinsWon[2]}',
-                                    style: const TextStyle(fontSize: 20),
-                                  ),
-                                ],
-                              ),
-                            if (playersControllers.length >= 4)
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    playerNames[3],
-                                    style: const TextStyle(fontSize: 20),
-                                  ),
-                                  Text(
-                                    '\$${skinsWon[3]}',
-                                    style: const TextStyle(fontSize: 20),
-                                  ),
-                                ],
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          }
-        },
-      ),
+    _skinsOverlay = createSkinsOverlay(
+      playerNamesFuture: _fetchPlayerNames(),
+      skinsWon: skinsWon,
+      playerCount: playersControllers.length,
     );
 
     overlay.insert(_skinsOverlay!);
@@ -1696,7 +1480,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 isLoading: isLoading,
               ),
             );
-            // setState(() {});
           },
           style: ElevatedButton.styleFrom(
             elevation: 8.0,
@@ -2255,18 +2038,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-                // box that shows the skins won be each player
-                // if (skinsMode && playersControllers.length >= 2)
-                //   Column(
-                //     children: [
-                //       Text('Player 1 Skins won: ${skinsWon[0]}'),
-                //       Text('Player 2 Skins won: ${skinsWon[1]}'),
-                //       if (playersControllers.length >= 3)
-                //         Text('Player 3 Skins won: ${skinsWon[2]}'),
-                //       if (playersControllers.length >= 4)
-                //         Text('Player 4 Skins won: ${skinsWon[3]}'),
-                //     ],
-                //   ),
               ],
             ),
           ),
@@ -2290,26 +2061,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
-
-              // if (showFairwayGreen)
-              //   Padding(
-              //     padding: const EdgeInsets.only(
-              //         left: 12.0), // Padding to push it closer to the left edg
-              //     child: Column(
-              //       crossAxisAlignment: CrossAxisAlignment.start,
-              //       mainAxisAlignment: MainAxisAlignment.center,
-              //       children: [
-              //         Text(
-              //           'Fairways Hit: ${_countFairwaysHit()}/${pars[selectedTee]?.where((p) => p == 4 || p == 5).length}',
-              //           style: const TextStyle(fontSize: 11),
-              //         ),
-              //         Text(
-              //           'Greens Hit: ${_countGreensHit()}/18',
-              //           style: const TextStyle(fontSize: 11),
-              //         ),
-              //       ],
-              //     ),
-              //   ),
               if (skinsMode) const SizedBox(width: 25),
               if (skinsMode)
                 GestureDetector(
@@ -2349,10 +2100,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   showCupertinoDialog(
                     context: context,
                     builder: (BuildContext context) => CupertinoAlertDialog(
-                      // title: Text(
-                      //   'Reset',
-                      //   style: TextStyle(fontSize: 20 * scaleFactor),
-                      // ),
                       content: const Text(
                         'Are you sure you want to reset the scores?',
                         style: TextStyle(fontSize: 18),
