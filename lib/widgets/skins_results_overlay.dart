@@ -33,72 +33,10 @@ OverlayEntry createSkinsOverlay({
                     borderRadius: BorderRadius.circular(10),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text(
-                            'Skins Results',
-                            style: TextStyle(
-                              fontSize: 30,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                playerNames[0],
-                                style: const TextStyle(fontSize: 20),
-                              ),
-                              Text(
-                                '\$${skinsWon[0]}',
-                                style: const TextStyle(fontSize: 20),
-                              ),
-                            ],
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                playerNames[1],
-                                style: const TextStyle(fontSize: 20),
-                              ),
-                              Text(
-                                '\$${skinsWon[1]}',
-                                style: const TextStyle(fontSize: 20),
-                              ),
-                            ],
-                          ),
-                          if (playerCount >= 3)
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  playerNames[2],
-                                  style: const TextStyle(fontSize: 20),
-                                ),
-                                Text(
-                                  '\$${skinsWon[2]}',
-                                  style: const TextStyle(fontSize: 20),
-                                ),
-                              ],
-                            ),
-                          if (playerCount >= 4)
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  playerNames[3],
-                                  style: const TextStyle(fontSize: 20),
-                                ),
-                                Text(
-                                  '\$${skinsWon[3]}',
-                                  style: const TextStyle(fontSize: 20),
-                                ),
-                              ],
-                            ),
-                        ],
+                      child: _SkinsResultsContent(
+                        playerNames: playerNames,
+                        skinsWon: skinsWon,
+                        playerCount: playerCount,
                       ),
                     ),
                   ),
@@ -110,4 +48,74 @@ OverlayEntry createSkinsOverlay({
       },
     ),
   );
+}
+
+class _SkinsResultsContent extends StatelessWidget {
+  const _SkinsResultsContent({
+    required this.playerNames,
+    required this.skinsWon,
+    required this.playerCount,
+  });
+
+  final List<String> playerNames;
+  final List<int> skinsWon;
+  final int playerCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text(
+          'Skins Results',
+          style: TextStyle(
+            fontSize: 30,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 10),
+        for (int index = 0; index < playerCount; index++) ...[
+          if (index != 0) const SizedBox(height: 8),
+          _SkinsResultRow(
+            name: _playerName(index),
+            amount: index < skinsWon.length ? skinsWon[index] : 0,
+          ),
+        ],
+      ],
+    );
+  }
+
+  String _playerName(int index) {
+    if (index < playerNames.length && playerNames[index].isNotEmpty) {
+      return playerNames[index];
+    }
+    return 'Player ${index + 1}';
+  }
+}
+
+class _SkinsResultRow extends StatelessWidget {
+  const _SkinsResultRow({
+    required this.name,
+    required this.amount,
+  });
+
+  final String name;
+  final int amount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          name,
+          style: const TextStyle(fontSize: 20),
+        ),
+        Text(
+          '\$$amount',
+          style: const TextStyle(fontSize: 20),
+        ),
+      ],
+    );
+  }
 }

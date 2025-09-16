@@ -2,7 +2,6 @@
 // ignore_for_file: no_leading_underscores_for_local_identifiers
 
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:csv/csv.dart';
@@ -13,6 +12,7 @@ import 'package:provider/provider.dart';
 import 'package:scorecard_app/course_data_provider.dart';
 import 'package:scorecard_app/scale_factor_provider.dart';
 import 'package:scorecard_app/widgets/course_action_sheet.dart';
+import 'package:scorecard_app/widgets/home_bottom_bar.dart';
 import 'package:scorecard_app/widgets/match_play_press_row.dart';
 import 'package:scorecard_app/widgets/match_play_results_row.dart';
 import 'package:scorecard_app/widgets/match_play_results_row_9.dart';
@@ -22,6 +22,9 @@ import 'package:scorecard_app/widgets/settings_page.dart';
 import 'package:scorecard_app/widgets/skins_row.dart';
 import 'package:scorecard_app/widgets/skins_results_overlay.dart';
 import 'package:scorecard_app/widgets/team_match_play_results_row.dart';
+import 'package:scorecard_app/services/skins_service.dart';
+import 'package:scorecard_app/services/round_share_service.dart';
+import 'package:scorecard_app/services/match_play_service.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'database_helper.dart';
@@ -91,6 +94,12 @@ class _HomeScreenState extends State<HomeScreen> {
   List<int> skinsWon = [0, 0, 0, 0];
   List<List<bool>> skinsWonByHole =
       List.generate(4, (_) => List.filled(18, false));
+
+  late final SkinsService _skinsService = SkinsService(dbHelper: dbHelper);
+  late final RoundShareService _roundShareService =
+      RoundShareService(dbHelper: dbHelper);
+  late final MatchPlayService _matchPlayService =
+      MatchPlayService(dbHelper: dbHelper);
 
   @override
   void initState() {
@@ -171,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
     for (int i = startHole; i < 18; i++) {
       final prevPressScore = (i == startHole) ? 0 : pressResults[i - 1];
 
-      final holeResult;
+      int holeResult;
       if (teamFormat == true) {
         holeResult = matchPlayResults[i] - matchPlayResults[i - 1];
       } else {
@@ -358,11 +367,6 @@ class _HomeScreenState extends State<HomeScreen> {
         controller.clear();
       }
 
-      int numberOfHoles = 18;
-      if (selectedCourse == 'Cordova Bay Ridge Course') {
-        numberOfHoles = 9;
-      }
-
       fairwaysHit = List.generate(18, (index) => 0);
       score = List.generate(4, (index) => List.generate(18, (index) => 0));
       greensHit = List.generate(18, (index) => 0);
@@ -403,41 +407,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _shareRoundDetails() async {
-    StringBuffer details = StringBuffer();
+    final report = await _roundShareService.buildRoundSummary(
+      course: selectedCourse,
+      tee: selectedTee,
+      playerCount: playersControllers.length,
+    );
 
-    details.writeln('Golf Round Details:');
-    details.writeln('Course: $selectedCourse');
-    details.writeln('Tee: $selectedTee');
-    details.writeln('');
-
-    for (int playerIndex = 0;
-        playerIndex < playersControllers.length;
-        playerIndex++) {
-      String? playerName = await dbHelper.getPlayerName(playerIndex) ??
-          'Player ${playerIndex + 1}';
-      int totalScore = 0;
-      int frontScore = 0;
-      int backScore = 0;
-      for (int holeIndex = 0; holeIndex < 18; holeIndex++) {
-        int score = await dbHelper.getScoreForHole(playerIndex, holeIndex);
-        if (holeIndex >= 0 && holeIndex <= 8) {
-          frontScore += score;
-        }
-        if (holeIndex >= 9 && holeIndex <= 17) {
-          backScore += score;
-        }
-        totalScore += score;
-      }
-
-      details.writeln('Player: $playerName');
-      details.writeln('Front: $frontScore');
-      details.writeln('Back: $backScore');
-      details.writeln('Score: $totalScore');
-      details.writeln('');
-    }
-
-    // return details.toString();
-    Share.share(details.toString(), subject: 'Golf Round Details');
+    Share.share(report, subject: 'Golf Round Details');
   }
 
   Future<void> _loadSettings() async {
@@ -470,230 +446,23 @@ class _HomeScreenState extends State<HomeScreen> {
     final playerCount = await dbHelper.getPlayerCount();
     if (playerCount < 1) return;
 
-    //if negative, player 2 gets strokes, if positive, player 1 gets strokes
-    int player1Handicap = (await dbHelper.getHandicap(0)) ?? 0;
-    int player2Handicap = (await dbHelper.getHandicap(1)) ?? 0;
-    int netStrokes = player1Handicap - player2Handicap;
+    final PairMatchResult result = await _matchPlayService.calculatePairMatch(
+      playerAIndex: 0,
+      playerBIndex: 1,
+      mensHandicap: mensHcap,
+    );
 
-    matchPlayResultsPair1 = List.generate(18, (index) => 0);
-    matchPlayResultsPair1Back9 = List.generate(9, (index) => 0);
+    setState(() {
+      matchPlayResultsPair1 = result.overall;
+      matchPlayResultsPair1Back9 = result.backNine;
 
-    for (int i = 0; i < 18; i++) {
-      final player1Score = await dbHelper.getScoreForHole(0, i);
-      final player2Score = await dbHelper.getScoreForHole(1, i);
-      if (player1Score == 0 || player2Score == 0) {
-        for (int j = i; j < 9; j++) {
-          matchPlayResultsPair1Back9[j] = 0;
+      if (presses.isNotEmpty) {
+        for (int startHole in pressStartHoles) {
+          pressMatchPlayResults[pressStartHoles.indexOf(startHole)] =
+              _calculatePressMatchPlay(startHole, false);
         }
-        break;
       }
-
-      bool isHandicapHole = false;
-      isHandicapHole = mensHcap[i] <= netStrokes.abs();
-
-      if (player1Score != 0 && player2Score != 0) {
-        if (isHandicapHole) {
-          if (netStrokes > 0) {
-            //player 1 gets extra stroke
-            if ((player1Score < player2Score + 1)) {
-              //playerindex 0 holeindex i < playerindex 1 holeindex i + 1
-              if (i == 0) {
-                matchPlayResultsPair1[i] = -1; //negative == player 1 lead
-              } else {
-                matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1] - 1;
-              }
-            } else if (player1Score > (player2Score) + 1) {
-              //playerindex 0 holeindex i > playerindex 1 holeindex i + 1
-              if (i == 0) {
-                matchPlayResultsPair1[i] = 1; //positive  == player 2 lead
-              } else {
-                matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1] + 1;
-              }
-            } else {
-              if (i == 0) {
-                matchPlayResultsPair1[i] = 0; //tie == nothing changes
-              } else {
-                matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1];
-              }
-            }
-          } else if (netStrokes < 0) {
-            if (((player1Score) + 1 < (player2Score))) {
-              //playerindex 0 holeindex i  + 1 < playerindex 1 holeindex i
-              if (i == 0) {
-                matchPlayResultsPair1[i] = -1; //negative == player 1 lead
-              } else {
-                matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1] - 1;
-              }
-            } else if ((player1Score) + 1 > (player2Score)) {
-              //playerindex 0 holeindex i + 1 > playerindex 1 holeindex i
-              if (i == 0) {
-                matchPlayResultsPair1[i] = 1; //positive  == player 2 lead
-              } else {
-                matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1] + 1;
-              }
-            } else {
-              if (i == 0) {
-                matchPlayResultsPair1[i] = 0; //tie == nothing changes
-              } else {
-                matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1];
-              }
-            }
-          }
-        } else {
-          if ((player1Score < player2Score)) {
-            //playerindex 0 holeindex i < playerindex 1 holeindex i
-            if (i == 0) {
-              matchPlayResultsPair1[i] = -1; //negative == player 1 lead
-            } else {
-              matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1] - 1;
-            }
-          } else if (player1Score > player2Score) {
-            //playerindex 0 holeindex i > playerindex 1 holeindex i
-            if (i == 0) {
-              matchPlayResultsPair1[i] = 1; //positive  == player 2 lead
-            } else {
-              matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1] + 1;
-            }
-          } else {
-            if (i == 0) {
-              matchPlayResultsPair1[i] = 0; //tie == nothing changes
-            } else {
-              matchPlayResultsPair1[i] = matchPlayResultsPair1[i - 1];
-            }
-          }
-        }
-      } else {
-        matchPlayResultsPair1[i] = 0;
-      }
-    }
-
-    for (int i = 0; i < 9; i++) {
-      final player1Score = await dbHelper.getScoreForHole(0, i + 9);
-      final player2Score = await dbHelper.getScoreForHole(1, i + 9);
-      if (player1Score == 0 || player2Score == 0) {
-        for (int j = i; j < 9; j++) {
-          matchPlayResultsPair1Back9[j] = 0;
-        }
-        break;
-      }
-
-      bool isHandicapHole = false;
-      isHandicapHole = mensHcap[i + 9] <= netStrokes.abs();
-
-      if (player1Score != 0 && player2Score != 0) {
-        if (isHandicapHole) {
-          if (netStrokes > 0) {
-            //player 1 gets extra stroke
-            if ((player1Score < player2Score + 1)) {
-              //playerindex 0 holeindex i < playerindex 1 holeindex i + 1
-              if (i == 0) {
-                matchPlayResultsPair1Back9[i] = -1; //negative == player 1 lead
-              } else {
-                matchPlayResultsPair1Back9[i] =
-                    matchPlayResultsPair1Back9[i - 1] - 1;
-              }
-            } else if (player1Score > (player2Score) + 1) {
-              //playerindex 0 holeindex i > playerindex 1 holeindex i + 1
-              if (i == 0) {
-                matchPlayResultsPair1Back9[i] = 1; //positive  == player 2 lead
-              } else {
-                matchPlayResultsPair1Back9[i] =
-                    matchPlayResultsPair1Back9[i - 1] + 1;
-              }
-            } else {
-              if (i == 0) {
-                matchPlayResultsPair1Back9[i] = 0; //tie == nothing changes
-              } else {
-                matchPlayResultsPair1Back9[i] =
-                    matchPlayResultsPair1Back9[i - 1];
-              }
-            }
-          } else if (netStrokes < 0) {
-            if (((player1Score) + 1 < (player2Score))) {
-              //playerindex 0 holeindex i  + 1 < playerindex 1 holeindex i
-              if (i == 0) {
-                matchPlayResultsPair1Back9[i] = -1; //negative == player 1 lead
-              } else {
-                matchPlayResultsPair1Back9[i] =
-                    matchPlayResultsPair1Back9[i - 1] - 1;
-              }
-            } else if ((player1Score) + 1 > (player2Score)) {
-              //playerindex 0 holeindex i + 1 > playerindex 1 holeindex i
-              if (i == 0) {
-                matchPlayResultsPair1Back9[i] = 1; //positive  == player 2 lead
-              } else {
-                matchPlayResultsPair1Back9[i] =
-                    matchPlayResultsPair1Back9[i - 1] + 1;
-              }
-            } else {
-              if (i == 0) {
-                matchPlayResultsPair1Back9[i] = 0; //tie == nothing changes
-              } else {
-                matchPlayResultsPair1Back9[i] =
-                    matchPlayResultsPair1Back9[i - 1];
-              }
-            }
-          }
-        } else {
-          if ((player1Score < player2Score)) {
-            //playerindex 0 holeindex i < playerindex 1 holeindex i
-            if (i == 0) {
-              matchPlayResultsPair1Back9[i] = -1; //negative == player 1 lead
-            } else {
-              matchPlayResultsPair1Back9[i] =
-                  matchPlayResultsPair1Back9[i - 1] - 1;
-            }
-          } else if (player1Score > player2Score) {
-            //playerindex 0 holeindex i > playerindex 1 holeindex i
-            if (i == 0) {
-              matchPlayResultsPair1Back9[i] = 1; //positive  == player 2 lead
-            } else {
-              matchPlayResultsPair1Back9[i] =
-                  matchPlayResultsPair1Back9[i - 1] + 1;
-            }
-          } else {
-            if (i == 0) {
-              matchPlayResultsPair1Back9[i] = 0; //tie == nothing changes
-            } else {
-              matchPlayResultsPair1Back9[i] = matchPlayResultsPair1Back9[i - 1];
-            }
-          }
-        }
-      } else {
-        matchPlayResultsPair1Back9[i] = 0;
-      }
-
-      // if ((player1Score < player2Score)) {
-      //   //playerindex 0 holeindex i < playerindex 1 holeindex i
-      //   if (i == 0) {
-      //     matchPlayResultsPair1Back9[i] = -1; //negative == player 1 lead
-      //   } else {
-      //     matchPlayResultsPair1Back9[i] = matchPlayResultsPair1Back9[i - 1] - 1;
-      //   }
-      // } else if (player1Score > (player2Score)) {
-      //   //playerindex 0 holeindex i > playerindex 1 holeindex i
-      //   if (i == 0) {
-      //     matchPlayResultsPair1Back9[i] = 1; //positive  == player 2 lead
-      //   } else {
-      //     matchPlayResultsPair1Back9[i] = matchPlayResultsPair1Back9[i - 1] + 1;
-      //   }
-      // } else {
-      //   if (i == 0) {
-      //     matchPlayResultsPair1Back9[i] = 0; //tie == nothing changes
-      //   } else {
-      //     matchPlayResultsPair1Back9[i] = matchPlayResultsPair1Back9[i - 1];
-      //   }
-      // }
-    }
-
-    // Trigger a rebuild to display the results
-    if (presses.isNotEmpty) {
-      for (int startHole in pressStartHoles) {
-        pressMatchPlayResults[pressStartHoles.indexOf(startHole)] =
-            _calculatePressMatchPlay(startHole, false);
-      }
-    }
-    setState(() {});
+    });
   }
 
   Future<void> _calculateMatchPlay34() async {
@@ -704,478 +473,37 @@ class _HomeScreenState extends State<HomeScreen> {
     final playerCount = await dbHelper.getPlayerCount();
     if (playerCount < 1) return;
 
-    //if negative, player 2 gets strokes, if positive, player 1 gets strokes
-    int player3Handicap = (await dbHelper.getHandicap(2)) ?? 0;
-    int player4Handicap = (await dbHelper.getHandicap(3)) ?? 0;
-    int netStrokes = player3Handicap - player4Handicap;
+    final PairMatchResult result = await _matchPlayService.calculatePairMatch(
+      playerAIndex: 2,
+      playerBIndex: 3,
+      mensHandicap: mensHcap,
+    );
 
-    matchPlayResultsPair2 = List.generate(18, (index) => 0);
-    matchPlayResultsPair2Back9 = List.generate(9, (index) => 0);
+    setState(() {
+      matchPlayResultsPair2 = result.overall;
+      matchPlayResultsPair2Back9 = result.backNine;
 
-    for (int i = 0; i < 18; i++) {
-      final player3Score = await dbHelper.getScoreForHole(2, i);
-      final player4Score = await dbHelper.getScoreForHole(3, i);
-      if (player3Score == 0 || player4Score == 0) {
-        for (int j = i; j < 9; j++) {
-          matchPlayResultsPair2Back9[j] = 0;
+      if (presses.isNotEmpty) {
+        for (int startHole in pressStartHoles) {
+          pressMatchPlayResults[pressStartHoles.indexOf(startHole)] =
+              _calculatePressMatchPlay(startHole, false);
         }
-        break;
       }
-
-      bool isHandicapHole = false;
-      isHandicapHole = mensHcap[i] <= netStrokes.abs();
-
-      if (player3Score != 0 && player4Score != 0) {
-        if (isHandicapHole) {
-          if (netStrokes > 0) {
-            //player 3 gets extra stroke
-            if ((player3Score < player4Score + 1)) {
-              //playerindex 0 holeindex i < playerindex 1 holeindex i + 1
-              if (i == 0) {
-                matchPlayResultsPair2[i] = -1; //negative == player 1 lead
-              } else {
-                matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1] - 1;
-              }
-            } else if (player3Score > (player4Score) + 1) {
-              //playerindex 0 holeindex i > playerindex 1 holeindex i + 1
-              if (i == 0) {
-                matchPlayResultsPair2[i] = 1; //positive  == player 2 lead
-              } else {
-                matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1] + 1;
-              }
-            } else {
-              if (i == 0) {
-                matchPlayResultsPair2[i] = 0; //tie == nothing changes
-              } else {
-                matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1];
-              }
-            }
-          } else if (netStrokes < 0) {
-            if (((player3Score) + 1 < (player4Score))) {
-              //playerindex 0 holeindex i  + 1 < playerindex 1 holeindex i
-              if (i == 0) {
-                matchPlayResultsPair2[i] = -1; //negative == player 1 lead
-              } else {
-                matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1] - 1;
-              }
-            } else if ((player3Score) + 1 > (player4Score)) {
-              //playerindex 0 holeindex i + 1 > playerindex 1 holeindex i
-              if (i == 0) {
-                matchPlayResultsPair2[i] = 1; //positive  == player 2 lead
-              } else {
-                matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1] + 1;
-              }
-            } else {
-              if (i == 0) {
-                matchPlayResultsPair2[i] = 0; //tie == nothing changes
-              } else {
-                matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1];
-              }
-            }
-          }
-        } else {
-          if (player3Score < player4Score) {
-            //playerindex 0 holeindex i < playerindex 1 holeindex i
-            if (i == 0) {
-              matchPlayResultsPair2[i] = -1; //negative == player 1 lead
-            } else {
-              matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1] - 1;
-            }
-          } else if (player3Score > player4Score) {
-            //playerindex 0 holeindex i > playerindex 1 holeindex i
-            if (i == 0) {
-              matchPlayResultsPair2[i] = 1; //positive  == player 2 lead
-            } else {
-              matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1] + 1;
-            }
-          } else {
-            if (i == 0) {
-              matchPlayResultsPair2[i] = 0; //tie == nothing changes
-            } else {
-              matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1];
-            }
-          }
-        }
-      } else {
-        matchPlayResultsPair2[i] = 0;
-      }
-    }
-
-    for (int i = 0; i < 9; i++) {
-      final player3Score = await dbHelper.getScoreForHole(2, i + 9);
-      final player4Score = await dbHelper.getScoreForHole(3, i + 9);
-
-      if (player3Score == 0 || player4Score == 0) {
-        for (int j = i; j < 9; j++) {
-          matchPlayResultsPair2Back9[j] = 0;
-        }
-        break;
-      }
-
-      bool isHandicapHole = false;
-      isHandicapHole = mensHcap[i + 9] <= netStrokes.abs();
-
-      if (player3Score != 0 && player4Score != 0) {
-        if (isHandicapHole) {
-          if (netStrokes > 0) {
-            //player 1 gets extra stroke
-            if ((player3Score < player4Score + 1)) {
-              //playerindex 0 holeindex i < playerindex 1 holeindex i + 1
-              if (i == 0) {
-                matchPlayResultsPair2Back9[i] = -1; //negative == player 1 lead
-              } else {
-                matchPlayResultsPair2Back9[i] =
-                    matchPlayResultsPair2Back9[i - 1] - 1;
-              }
-            } else if (player3Score > (player4Score) + 1) {
-              //playerindex 0 holeindex i > playerindex 1 holeindex i + 1
-              if (i == 0) {
-                matchPlayResultsPair2Back9[i] = 1; //positive  == player 2 lead
-              } else {
-                matchPlayResultsPair2Back9[i] =
-                    matchPlayResultsPair2Back9[i - 1] + 1;
-              }
-            } else {
-              if (i == 0) {
-                matchPlayResultsPair2Back9[i] = 0; //tie == nothing changes
-              } else {
-                matchPlayResultsPair2Back9[i] =
-                    matchPlayResultsPair2Back9[i - 1];
-              }
-            }
-          } else if (netStrokes < 0) {
-            if (((player3Score) + 1 < (player4Score))) {
-              //playerindex 0 holeindex i  + 1 < playerindex 1 holeindex i
-              if (i == 0) {
-                matchPlayResultsPair2Back9[i] = -1; //negative == player 1 lead
-              } else {
-                matchPlayResultsPair2Back9[i] =
-                    matchPlayResultsPair2Back9[i - 1] - 1;
-              }
-            } else if ((player3Score) + 1 > (player4Score)) {
-              //playerindex 0 holeindex i + 1 > playerindex 1 holeindex i
-              if (i == 0) {
-                matchPlayResultsPair2Back9[i] = 1; //positive  == player 2 lead
-              } else {
-                matchPlayResultsPair2Back9[i] =
-                    matchPlayResultsPair2Back9[i - 1] + 1;
-              }
-            } else {
-              if (i == 0) {
-                matchPlayResultsPair2Back9[i] = 0; //tie == nothing changes
-              } else {
-                matchPlayResultsPair2Back9[i] =
-                    matchPlayResultsPair2Back9[i - 1];
-              }
-            }
-          }
-        } else {
-          if ((player3Score < player4Score)) {
-            //playerindex 0 holeindex i < playerindex 1 holeindex i
-            if (i == 0) {
-              matchPlayResultsPair2Back9[i] = -1; //negative == player 1 lead
-            } else {
-              matchPlayResultsPair2Back9[i] =
-                  matchPlayResultsPair2Back9[i - 1] - 1;
-            }
-          } else if (player3Score > player4Score) {
-            //playerindex 0 holeindex i > playerindex 1 holeindex i
-            if (i == 0) {
-              matchPlayResultsPair2Back9[i] = 1; //positive  == player 2 lead
-            } else {
-              matchPlayResultsPair2Back9[i] =
-                  matchPlayResultsPair2Back9[i - 1] + 1;
-            }
-          } else {
-            if (i == 0) {
-              matchPlayResultsPair2Back9[i] = 0; //tie == nothing changes
-            } else {
-              matchPlayResultsPair2Back9[i] = matchPlayResultsPair2Back9[i - 1];
-            }
-          }
-        }
-      } else {
-        matchPlayResultsPair2Back9[i] = 0;
-      }
-    }
-
-    // Trigger a rebuild to display the results
-    if (presses.isNotEmpty) {
-      for (int startHole in pressStartHoles) {
-        pressMatchPlayResults[pressStartHoles.indexOf(startHole)] =
-            _calculatePressMatchPlay(startHole, false);
-      }
-    }
-    setState(() {});
-
-    // if (matchPlayMode == false && skinsMode == true) {
-    //   await _calculateSkins();
-    //   return;
-    // }
-    // final playerCount = await dbHelper.getPlayerCount();
-    // if (playerCount < 1) return;
-
-    // //if negative, player 2 gets strokes, if positive, player 1 gets strokes
-    // int player3Handicap = (await dbHelper.getHandicap(2)) ?? 0;
-    // int player4Handicap = (await dbHelper.getHandicap(3)) ?? 0;
-    // int netStrokes = player3Handicap - player4Handicap;
-
-    // matchPlayResultsPair2 = List.generate(18, (index) => 0);
-
-    // for (int i = 0; i < 18; i++) {
-    //   final player3Score = await dbHelper.getScoreForHole(2, i);
-    //   final player4Score = await dbHelper.getScoreForHole(3, i);
-    //   if (player3Score == 0 || player4Score == 0) {
-    //     matchPlayResultsPair2[i] = 0;
-    //     setState(() {});
-    //     return;
-    //   }
-
-    //   final isHandicapHole = mensHcap[i] <= netStrokes.abs();
-
-    //   if (player3Score != 0 && player4Score != 0) {
-    //     if (isHandicapHole) {
-    //       if (netStrokes > 0) {
-    //         //player 1 gets extra stroke
-    //         if ((player3Score < player4Score + 1)) {
-    //           if (i == 0 || i == 9) {
-    //             matchPlayResultsPair2[i] = -1; //negative == player 1 lead
-    //           } else {
-    //             matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1] - 1;
-    //           }
-    //         } else if (player3Score > (player4Score) + 1) {
-    //           if (i == 0 || i == 9) {
-    //             matchPlayResultsPair2[i] = 1; //positive  == player 2 lead
-    //           } else {
-    //             matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1] + 1;
-    //           }
-    //         } else {
-    //           if (i == 0 || i == 9) {
-    //             matchPlayResultsPair2[i] = 0; //tie == nothing changes
-    //           } else {
-    //             matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1];
-    //           }
-    //         }
-    //       } else if (netStrokes < 0) {
-    //         if (((player3Score) + 1 < (player4Score))) {
-    //           if (i == 0 || i == 9) {
-    //             matchPlayResultsPair2[i] = -1; //negative == player 1 lead
-    //           } else {
-    //             matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1] - 1;
-    //           }
-    //         } else if ((player3Score) + 1 > (player4Score)) {
-    //           if (i == 0 || i == 9) {
-    //             matchPlayResultsPair2[i] = 1; //positive  == player 2 lead
-    //           } else {
-    //             matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1] + 1;
-    //           }
-    //         } else {
-    //           if (i == 0 || i == 9) {
-    //             matchPlayResultsPair2[i] = 0; //tie == nothing changes
-    //           } else {
-    //             matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1];
-    //           }
-    //         }
-    //       }
-    //     } else {
-    //       if ((player3Score < (player4Score))) {
-    //         if (i == 0 || i == 9) {
-    //           matchPlayResultsPair2[i] = -1; //negative == player 1 lead
-    //         } else {
-    //           matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1] - 1;
-    //         }
-    //       } else if (player3Score > (player4Score)) {
-    //         if (i == 0 || i == 9) {
-    //           matchPlayResultsPair2[i] = 1; //positive  == player 2 lead
-    //         } else {
-    //           matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1] + 1;
-    //         }
-    //       } else {
-    //         if (i == 0 || i == 9) {
-    //           matchPlayResultsPair2[i] = 0; //tie == nothing changes
-    //         } else {
-    //           matchPlayResultsPair2[i] = matchPlayResultsPair2[i - 1];
-    //         }
-    //       }
-    //     }
-    //   } else {
-    //     matchPlayResultsPair2[i] = 0;
-    //   }
-    // }
-    // // Trigger a rebuild to display the results
-    // if (presses.isNotEmpty) {
-    //   for (int startHole in pressStartHoles) {
-    //     pressMatchPlayResults[pressStartHoles.indexOf(startHole)] =
-    //         _calculatePressMatchPlay(startHole, false);
-    //   }
-    // }
-    // setState(() {});
+    });
   }
 
   Future<void> _calculateTeamMatchPlayFourBall() async {
-    final playerCount = await dbHelper.getPlayerCount();
-    if (playerCount < 4) return;
+    final TeamMatchResult result =
+        await _matchPlayService.calculateTeamMatchPlayFourBall(
+      mensHandicap: mensHcap,
+      womensHandicap: womensHcap,
+      useMensHandicap: mensHandicap,
+    );
 
-    // if (await dbHelper.getPlayerCount() as int < 2) return;
-
-    int player1Handicap = (await dbHelper.getHandicap(0)) ?? 0;
-    int player2Handicap = (await dbHelper.getHandicap(1)) ?? 0;
-    int player3Handicap = (await dbHelper.getHandicap(2)) ?? 0;
-    int player4Handicap = (await dbHelper.getHandicap(3)) ?? 0;
-
-    int lowerstHandicap = [
-      player1Handicap,
-      player2Handicap,
-      player3Handicap,
-      player4Handicap
-    ].reduce((a, b) => a < b ? a : b);
-
-    int netStrokesPlayer1 = player1Handicap - lowerstHandicap;
-    int netStrokesPlayer2 = player2Handicap - lowerstHandicap;
-    int netStrokesPlayer3 = player3Handicap - lowerstHandicap;
-    int netStrokesPlayer4 = player4Handicap - lowerstHandicap;
-
-    matchPlayResults = List.generate(18, (index) => 0);
-    matchPlayResultsBack9 = List.generate(9, (index) => 0);
-
-    for (int i = 0; i < 18; i++) {
-      final player1Score = await dbHelper.getScoreForHole(0, i);
-      final player2Score = await dbHelper.getScoreForHole(1, i);
-      final player3Score = await dbHelper.getScoreForHole(2, i);
-      final player4Score = await dbHelper.getScoreForHole(3, i);
-
-      // Check if any of the scores are missing
-      if (player1Score == 0 ||
-          player2Score == 0 ||
-          player3Score == 0 ||
-          player4Score == 0) {
-        for (int j = i; j < 18; j++) {
-          matchPlayResults[j] = 0;
-        }
-        break;
-      }
-
-      // Determine if the current hole is a handicap hole
-      final isHandicapHole = mensHandicap ? mensHcap[i] : womensHcap[i];
-
-      final netScorePlayer1 =
-          player1Score - (netStrokesPlayer1 >= isHandicapHole ? 1 : 0);
-      final netScorePlayer2 =
-          player2Score - (netStrokesPlayer2 >= isHandicapHole ? 1 : 0);
-      final netScorePlayer3 =
-          player3Score - (netStrokesPlayer3 >= isHandicapHole ? 1 : 0);
-      final netScorePlayer4 =
-          player4Score - (netStrokesPlayer4 >= isHandicapHole ? 1 : 0);
-
-      // Best ball for Team 1
-      final bestBallTeam1 =
-          [netScorePlayer1, netScorePlayer2].reduce((a, b) => a < b ? a : b);
-      // Best ball for Team 2
-      final bestBallTeam2 =
-          [netScorePlayer3, netScorePlayer4].reduce((a, b) => a < b ? a : b);
-
-      // Determine the result for the hole
-      if (bestBallTeam1 < bestBallTeam2) {
-        if (i == 0) {
-          matchPlayResults[i] = -1; // Team 1 wins the hole
-        } else {
-          matchPlayResults[i] = matchPlayResults[i - 1] - 1;
-        }
-        // matchPlayResults[i] = -1; // Team 1 wins the hole
-      } else if (bestBallTeam1 > bestBallTeam2) {
-        if (i == 0) {
-          matchPlayResults[i] = 1; // Team 2 wins the hole
-        } else {
-          matchPlayResults[i] = matchPlayResults[i - 1] + 1;
-        }
-        // matchPlayResults[i] = 1; // Team 2 wins the hole
-      } else {
-        if (i == 0) {
-          matchPlayResults[i] = 0; // The hole is tied
-        } else {
-          matchPlayResults[i] = matchPlayResults[i - 1];
-        }
-        // matchPlayResults[i] = 0; // The hole is tied
-      }
-
-      // Check for early match win
-      // if (!hasSeenMatchPlayWinDialog && i > 8) {
-      //   int team1Wins = matchPlayResults.where((result) => result == -1).length;
-      //   int team2Wins = matchPlayResults.where((result) => result == 1).length;
-
-      //   if (team1Wins >= 10) {
-      //     _showWinDialog('Team 1 Wins!', 'Team 1 has won the match play.');
-      //     break;
-      //   } else if (team2Wins >= 10) {
-      //     _showWinDialog('Team 2 Wins!', 'Team 2 has won the match play.');
-      //     break;
-      //   }
-      // }
-    }
-
-    for (int i = 0; i < 9; i++) {
-      final player1Score = await dbHelper.getScoreForHole(0, i + 9);
-      final player2Score = await dbHelper.getScoreForHole(1, i + 9);
-      final player3Score = await dbHelper.getScoreForHole(2, i + 9);
-      final player4Score = await dbHelper.getScoreForHole(3, i + 9);
-
-      // Check if any of the scores are missing
-      if (player1Score == 0 ||
-          player2Score == 0 ||
-          player3Score == 0 ||
-          player4Score == 0) {
-        for (int j = i; j < 9; j++) {
-          matchPlayResultsBack9[j] = 0;
-        }
-        break;
-      }
-
-      // Determine if the current hole is a handicap hole
-      final isHandicapHole = mensHandicap ? mensHcap[i + 9] : womensHcap[i + 9];
-
-      final netScorePlayer1 =
-          player1Score - (netStrokesPlayer1 >= isHandicapHole ? 1 : 0);
-      final netScorePlayer2 =
-          player2Score - (netStrokesPlayer2 >= isHandicapHole ? 1 : 0);
-      final netScorePlayer3 =
-          player3Score - (netStrokesPlayer3 >= isHandicapHole ? 1 : 0);
-      final netScorePlayer4 =
-          player4Score - (netStrokesPlayer4 >= isHandicapHole ? 1 : 0);
-
-      // Best ball for Team 1
-      final bestBallTeam1 =
-          [netScorePlayer1, netScorePlayer2].reduce((a, b) => a < b ? a : b);
-      // Best ball for Team 2
-      final bestBallTeam2 =
-          [netScorePlayer3, netScorePlayer4].reduce((a, b) => a < b ? a : b);
-
-      // Determine the result for the hole
-      if (bestBallTeam1 < bestBallTeam2) {
-        if (i == 0) {
-          matchPlayResultsBack9[i] = -1; // Team 1 wins the hole
-        } else {
-          matchPlayResultsBack9[i] = matchPlayResultsBack9[i - 1] - 1;
-        }
-        // matchPlayResults[i] = -1; // Team 1 wins the hole
-      } else if (bestBallTeam1 > bestBallTeam2) {
-        if (i == 0) {
-          matchPlayResultsBack9[i] = 1; // Team 2 wins the hole
-        } else {
-          matchPlayResultsBack9[i] = matchPlayResultsBack9[i - 1] + 1;
-        }
-        // matchPlayResults[i] = 1; // Team 2 wins the hole
-      } else {
-        if (i == 0) {
-          matchPlayResultsBack9[i] = 0; // The hole is tied
-        } else {
-          matchPlayResultsBack9[i] = matchPlayResultsBack9[i - 1];
-        }
-        // matchPlayResults[i] = 0; // The hole is tied
-      }
-    }
-
-    // Trigger a rebuild to display the results
-    setState(() {});
+    setState(() {
+      matchPlayResults = result.overall;
+      matchPlayResultsBack9 = result.backNine;
+    });
   }
 
   Future<bool> isStrokeHole(int hole, int playerIndex) async {
@@ -1262,137 +590,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _calculateSkins() async {
     final prefs = await SharedPreferences.getInstance();
-    final playerCount = await dbHelper.getPlayerCount();
+    final int newSkinValue = prefs.getInt('skinValue') ?? skinValue;
 
-    List<int> player1Score = List.generate(18, (index) => 0);
-    List<int> player2Score = List.generate(18, (index) => 0);
-    List<int> player3Score = List.generate(18, (index) => 0);
-    List<int> player4Score = List.generate(18, (index) => 0);
+    final SkinsResult result = await _skinsService.calculateSkins(
+      mensHandicap: mensHcap,
+      skinValue: newSkinValue,
+    );
 
-    int carryOver = prefs.getInt('skinValue') ?? 2; // Default $2 per skin
-    int skinValue = prefs.getInt('skinValue') ?? 2; // Default $2 per skin
-
-    // Initialize skinsArray globally (if not already initialized)
-    skinsArray = List.generate(18, (index) => skinValue);
-    skinsWon = [0, 0, 0, 0];
-    skinsWonByHole =
-        List.generate(4, (index) => List.generate(18, (index) => false));
-
-    if (playerCount == 2) {
-      int player1Handicap = await dbHelper.getHandicap(0) ?? 0;
-      int player2Handicap = await dbHelper.getHandicap(1) ?? 0;
-      int netStrokes = player1Handicap - player2Handicap;
-
-      // Get scores for both players
-      for (int i = 0; i < 18; i++) {
-        player1Score[i] = await dbHelper.getScoreForHole(0, i);
-        player2Score[i] = await dbHelper.getScoreForHole(1, i);
-      }
-
-      // Loop through each hole and determine who wins or if it's a tie
-      for (int i = 0; i < 18; i++) {
-        if (player1Score[i] == 0 || player2Score[i] == 0) {
-          continue; // Skip unplayed holes
-        }
-
-        // Apply net strokes if necessary
-        bool isHandicapHole = false;
-        isHandicapHole = mensHcap[i] <= netStrokes.abs();
-        int p1NetScore = player1Score[i];
-        int p2NetScore = player2Score[i];
-        if (isHandicapHole) {
-          p1NetScore = player1Score[i] - (netStrokes > 0 ? 1 : 0);
-          p2NetScore = player2Score[i] - (netStrokes < 0 ? 1 : 0);
-        }
-
-        if (p1NetScore < p2NetScore) {
-          // Player 1 wins, claim skins
-          skinsArray[i] = carryOver;
-          skinsWon[0] = skinsArray[i];
-          carryOver = skinValue; // Reset carryOver for the next hole
-          skinsWonByHole[0][i] = true;
-        } else if (p2NetScore < p1NetScore) {
-          // Player 2 wins, claim skins
-          skinsArray[i] = carryOver;
-          skinsWon[1] = skinsArray[i];
-          carryOver = skinValue; // Reset carryOver for the next hole
-          skinsWonByHole[1][i] = true;
-        } else {
-          // Tie: add the current carryOver to the next hole
-          skinsArray[i] = carryOver;
-          carryOver += skinValue;
-        }
-      }
-    }
-
-    // Handle cases where there are 3 or 4 players
-    if (playerCount >= 3) {
-      List<List<int>> scores = [player1Score, player2Score];
-      List<int> handicaps = [
-        await dbHelper.getHandicap(0) ?? 0,
-        await dbHelper.getHandicap(1) ?? 0
-      ];
-
-      if (playerCount >= 3) {
-        scores.add(player3Score);
-        handicaps.add(await dbHelper.getHandicap(2) ?? 0);
-      }
-      if (playerCount == 4) {
-        scores.add(player4Score);
-        handicaps.add(await dbHelper.getHandicap(3) ?? 0);
-      }
-
-      // Get scores for all players
-      for (int i = 0; i < 18; i++) {
-        for (int p = 0; p < playerCount; p++) {
-          scores[p][i] = await dbHelper.getScoreForHole(p, i);
-        }
-      }
-
-      for (int i = 0; i < 18; i++) {
-        if (scores.any((scoreList) => scoreList[i] == 0)) {
-          continue; // Skip unplayed holes
-        }
-
-        // Determine the net scores for each player
-        // List<int> netScores = List.generate(playerCount, (p) => scores[p][i]);
-
-        int lowestHandicap = handicaps.reduce((a, b) => a < b ? a : b);
-
-        List<int> netScores = List.generate(playerCount, (p) {
-          int handicapDifference = handicaps[p] - lowestHandicap;
-          bool getsStroke = mensHcap[i] <= handicapDifference.abs();
-          return scores[p][i] - (getsStroke ? 1 : 0);
-        });
-
-        // Find the minimum score
-        int minScore = netScores.reduce((a, b) => a < b ? a : b);
-
-        // Check if there is a tie for the minimum score
-        int minScoreCount =
-            netScores.where((score) => score == minScore).length;
-
-        if (minScoreCount == 1) {
-          // Only one player has the minimum score, they win the skins
-          int winnerIndex = netScores.indexOf(minScore);
-          skinsArray[i] = carryOver;
-          skinsWon[winnerIndex] += skinsArray[i];
-          carryOver = skinValue; // Reset carryOver for the next hole
-          if (i < 17) skinsArray[i + 1] = skinValue;
-          skinsWonByHole[winnerIndex][i] = true;
-        } else {
-          // Tie: add the current carryOver to the next hole
-          skinsArray[i] = carryOver;
-          carryOver += skinValue;
-        }
-        if (i < 17) {
-          for (int j = i + 2; j < 18; j++) {
-            skinsArray[j] = skinsArray[j - 1] + skinValue;
-          }
-        }
-      }
-    }
-    setState(() {});
+    setState(() {
+      skinValue = newSkinValue;
+      skinsArray = result.skinsArray;
+      skinsWon = result.skinsWon;
+      skinsWonByHole = result.skinsWonByHole;
+    });
   }
 
   OverlayEntry? _skinsOverlay;
@@ -1424,6 +634,45 @@ class _HomeScreenState extends State<HomeScreen> {
   void _hideSkinsOverlay() {
     _skinsOverlay?.remove();
     _skinsOverlay = null;
+  }
+
+  void _confirmReset(BuildContext context) {
+    showCupertinoDialog<void>(
+      context: context,
+      builder: (BuildContext context) => CupertinoAlertDialog(
+        content: const Text(
+          'Are you sure you want to reset the scores?',
+          style: TextStyle(fontSize: 18),
+        ),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () {
+              _resetValues();
+              Navigator.pop(context);
+            },
+            child: const Text(
+              'Reset',
+              style: TextStyle(
+                fontSize: 20,
+                color: CupertinoColors.destructiveRed,
+              ),
+            ),
+          ),
+          CupertinoDialogAction(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                fontSize: 20,
+                color: CupertinoColors.activeBlue,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -1733,10 +982,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                           pressResults:
                                               _calculatePressMatchPlay(
                                                   entry.key, true),
-                                          playerNames: [
-                                            team1Name ?? 'Team 1',
-                                            team2Name ?? 'Team 2',
-                                          ],
+                                          playerNames: [team1Name, team2Name],
                                           pressLabel: '${entry.key + 1}',
                                           onLongPress: _removePress,
                                         ),
@@ -2043,108 +1289,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: BottomAppBar(
-        height: 80,
-        child: SizedBox(
-          height: 80,
-          child: Row(
-            children: <Widget>[
-              if (playersControllers.length < 4)
-                GestureDetector(
-                  onTap: () {
-                    _addPlayer();
-                  },
-                  child: const Row(
-                    children: [
-                      SizedBox(width: 8),
-                      Icon(Icons.add),
-                    ],
-                  ),
-                ),
-              if (skinsMode) const SizedBox(width: 25),
-              if (skinsMode)
-                GestureDetector(
-                  onLongPress: () =>
-                      _showSkinsOverlay(context), // Show overlay on hold
-                  onLongPressUp:
-                      _hideSkinsOverlay, // Hide overlay when released
-                  child: Container(
-                    width: 75,
-                    height: 75,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Text(
-                      'Skins\nResults',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 18),
-                    ),
-                  ), // Eye icon for skins results
-                ),
-
-              const Spacer(), // Pushes the settings button to the right
-              IconButton(
-                onPressed: () {
-                  _shareRoundDetails();
-                },
-                color: CupertinoColors.activeBlue,
-                iconSize: 24,
-                icon: const Icon(
-                  CupertinoIcons.share_up,
-                  color: CupertinoColors.activeBlue,
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  showCupertinoDialog(
-                    context: context,
-                    builder: (BuildContext context) => CupertinoAlertDialog(
-                      content: const Text(
-                        'Are you sure you want to reset the scores?',
-                        style: TextStyle(fontSize: 18),
-                      ),
-                      actions: [
-                        CupertinoDialogAction(
-                          onPressed: () {
-                            _resetValues();
-                            Navigator.pop(context);
-                          },
-                          child: const Text(
-                            'Reset',
-                            style: TextStyle(
-                              fontSize: 20,
-                              color: CupertinoColors.destructiveRed,
-                            ),
-                          ),
-                        ),
-                        CupertinoDialogAction(
-                          onPressed: () {
-                            Navigator.pop(context);
-                          },
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(
-                                fontSize: 20,
-                                color: CupertinoColors.activeBlue),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-                child: const Text(
-                  'Reset',
-                  textAlign: TextAlign.start,
-                  style: TextStyle(
-                    fontSize: 20,
-                    color: CupertinoColors.destructiveRed,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+      bottomNavigationBar: HomeBottomBar(
+        canAddPlayer: playersControllers.length < 4,
+        onAddPlayer: _addPlayer,
+        skinsMode: skinsMode,
+        onShowSkinsOverlay: () => _showSkinsOverlay(context),
+        onHideSkinsOverlay: _hideSkinsOverlay,
+        onShare: _shareRoundDetails,
+        onResetPressed: () => _confirmReset(context),
       ),
     );
   }
