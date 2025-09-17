@@ -11,10 +11,10 @@
             "deviceId": "00008130-0009242C14F8001C"
         },
         {
-            "name": "iPhone 15 Pro Simulator",
+            "name": "iPhone 16 Pro Simulator",
             "request": "launch",
             "type": "dart",
-            "deviceId": "C2C4CD23-703B-4D72-ACF7-1D2ED148955C"
+            "deviceId": "87B7FF7B-0EE4-407A-9EA7-B6888C7D7C54"
         },
         {
             "name": "scorecard_app",
@@ -32,6 +32,6 @@
             "request": "launch",
             "type": "dart",
             "flutterMode": "release"
-        }
+        },
     ]
 }
