@@ -359,6 +359,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     min: 0.7,
                     max: 1.19,
                     divisions: 20,
+                    activeColor: CupertinoColors.activeBlue,
                     onChanged: (value) {
                       scaleFactorProvider.setScaleFactor(value);
                     },

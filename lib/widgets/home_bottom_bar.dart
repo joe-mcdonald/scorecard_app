@@ -11,6 +11,7 @@ class HomeBottomBar extends StatelessWidget {
     required this.onHideSkinsOverlay,
     required this.onShare,
     required this.onResetPressed,
+    required this.onHistoryPressed,
   });
 
   final bool canAddPlayer;
@@ -20,6 +21,7 @@ class HomeBottomBar extends StatelessWidget {
   final VoidCallback onHideSkinsOverlay;
   final VoidCallback onShare;
   final VoidCallback onResetPressed;
+  final VoidCallback onHistoryPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +41,7 @@ class HomeBottomBar extends StatelessWidget {
               child: Row(
                 children: [
                   IconButton(
-                    onPressed: () {},
+                    onPressed: onHistoryPressed,
                     icon: const Icon(Icons.history),
                   ),
                   if (skinsMode) ...[
