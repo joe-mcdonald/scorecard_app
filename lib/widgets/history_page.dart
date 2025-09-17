@@ -35,10 +35,7 @@ class _HistoryPageState extends State<HistoryPage> {
     return Scaffold(
       backgroundColor: CupertinoColors.systemGroupedBackground,
       appBar: AppBar(
-<<<<<<< HEAD
         automaticallyImplyLeading: true,
-=======
->>>>>>> fdbfc13d4615d063f229cf0a69c27bfe2df617ee
         title: const Text(
           'History',
           style: TextStyle(
@@ -48,11 +45,8 @@ class _HistoryPageState extends State<HistoryPage> {
           ),
         ),
         backgroundColor: const Color.fromARGB(255, 0, 120, 79),
-<<<<<<< HEAD
         foregroundColor: Colors.white,
         elevation: 0.5,
-=======
->>>>>>> fdbfc13d4615d063f229cf0a69c27bfe2df617ee
         actions: [
           if (widget.onSave != null)
             IconButton(
