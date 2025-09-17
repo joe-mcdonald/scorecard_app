@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+// ignore: depend_on_referenced_packages
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -21,8 +23,9 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'scorecard_app.db');
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -60,12 +63,24 @@ class DatabaseHelper {
       )
     ''');
 
-    // await db.execute('''
-    //   CREATE TABLE FavoriteCourses (
-    //     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    //     courseName TEXT
-    //   )
-    // ''');
+    await _createHistoryTable(db);
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await _createHistoryTable(db);
+    }
+  }
+
+  Future<void> _createHistoryTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS History (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course TEXT,
+        datePlayed TEXT,
+        players TEXT
+      )
+    ''');
   }
 
   Future<void> insertScore(int playerIndex, int holeIndex, int score) async {
@@ -294,5 +309,35 @@ class DatabaseHelper {
     } else {
       return 0;
     }
+  }
+
+  Future<int> insertHistoryEntry({
+    required String course,
+    required DateTime datePlayed,
+    required List<Map<String, dynamic>> players,
+  }) async {
+    final db = await database;
+    return await db.insert(
+      'History',
+      {
+        'course': course,
+        'datePlayed': datePlayed.toIso8601String().split('T').first,
+        'players': jsonEncode(players),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getHistoryEntries() async {
+    final db = await database;
+    return await db.query(
+      'History',
+      orderBy: 'datePlayed DESC',
+    );
+  }
+
+  Future<void> deleteHistoryEntry(int id) async {
+    final db = await database;
+    await db.delete('History', where: 'id = ?', whereArgs: [id]);
   }
 }

@@ -13,6 +13,7 @@ import 'package:scorecard_app/course_data_provider.dart';
 import 'package:scorecard_app/scale_factor_provider.dart';
 import 'package:scorecard_app/widgets/course_action_sheet.dart';
 import 'package:scorecard_app/widgets/home_bottom_bar.dart';
+import 'package:scorecard_app/widgets/history_page.dart';
 import 'package:scorecard_app/widgets/match_play_press_row.dart';
 import 'package:scorecard_app/widgets/match_play_results_row.dart';
 import 'package:scorecard_app/widgets/match_play_results_row_9.dart';
@@ -22,6 +23,7 @@ import 'package:scorecard_app/widgets/settings_page.dart';
 import 'package:scorecard_app/widgets/skins_row.dart';
 import 'package:scorecard_app/widgets/skins_results_overlay.dart';
 import 'package:scorecard_app/widgets/team_match_play_results_row.dart';
+import 'package:scorecard_app/widgets/reset_confirmation_dialog.dart';
 import 'package:scorecard_app/services/skins_service.dart';
 import 'package:scorecard_app/services/round_share_service.dart';
 import 'package:scorecard_app/services/match_play_service.dart';
@@ -416,6 +418,65 @@ class _HomeScreenState extends State<HomeScreen> {
     Share.share(report, subject: 'Golf Round Details');
   }
 
+  Future<void> _saveRoundToHistory({BuildContext? scaffoldContext}) async {
+    try {
+      final int playerCount = playersControllers.length;
+      if (playerCount == 0) {
+        ScaffoldMessenger.of(scaffoldContext ?? context).showSnackBar(
+          const SnackBar(content: Text('No players to save.')),
+        );
+        return;
+      }
+
+      final List<Map<String, dynamic>> playersData = [];
+
+      for (int playerIndex = 0; playerIndex < playerCount; playerIndex++) {
+        final String playerName = await dbHelper.getPlayerName(playerIndex) ??
+            'Player ${playerIndex + 1}';
+        final List<int> scores = [];
+        int totalScore = 0;
+
+        for (int holeIndex = 0; holeIndex < 18; holeIndex++) {
+          final score = await dbHelper.getScoreForHole(playerIndex, holeIndex);
+          scores.add(score);
+          totalScore += score;
+        }
+
+        playersData.add({
+          'name': playerName,
+          'scores': scores,
+          'total': totalScore,
+        });
+      }
+
+      await dbHelper.insertHistoryEntry(
+        course: selectedCourse.isEmpty ? 'Unknown Course' : selectedCourse,
+        datePlayed: DateTime.now(),
+        players: playersData,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(scaffoldContext ?? context).showSnackBar(
+        const SnackBar(content: Text('Round saved to history.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(scaffoldContext ?? context).showSnackBar(
+        SnackBar(content: Text('Failed to save history: $error')),
+      );
+    }
+  }
+
+  void _openHistoryPage() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => HistoryPage(
+          onSave: (ctx) => _saveRoundToHistory(scaffoldContext: ctx),
+        ),
+      ),
+    );
+  }
+
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     matchPlayMode = prefs.getBool('matchPlayMode') ?? false;
@@ -636,45 +697,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _skinsOverlay = null;
   }
 
-  void _confirmReset(BuildContext context) {
-    showCupertinoDialog<void>(
-      context: context,
-      builder: (BuildContext context) => CupertinoAlertDialog(
-        content: const Text(
-          'Are you sure you want to reset the scores?',
-          style: TextStyle(fontSize: 18),
-        ),
-        actions: [
-          CupertinoDialogAction(
-            onPressed: () {
-              _resetValues();
-              Navigator.pop(context);
-            },
-            child: const Text(
-              'Reset',
-              style: TextStyle(
-                fontSize: 20,
-                color: CupertinoColors.destructiveRed,
-              ),
-            ),
-          ),
-          CupertinoDialogAction(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text(
-              'Cancel',
-              style: TextStyle(
-                fontSize: 20,
-                color: CupertinoColors.activeBlue,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final scaleFactor = Provider.of<ScaleFactorProvider>(context).scaleFactor;
@@ -779,7 +801,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         },
                         child: Text(
                           tee,
-                          style: const TextStyle(fontSize: 20),
+                          style: const TextStyle(
+                            fontSize: 20,
+                            color: CupertinoColors.activeBlue,
+                          ),
                         ),
                       );
                     }).toList(),
@@ -1296,7 +1321,9 @@ class _HomeScreenState extends State<HomeScreen> {
         onShowSkinsOverlay: () => _showSkinsOverlay(context),
         onHideSkinsOverlay: _hideSkinsOverlay,
         onShare: _shareRoundDetails,
-        onResetPressed: () => _confirmReset(context),
+        onResetPressed: () =>
+            showResetConfirmationDialog(context, _resetValues),
+        onHistoryPressed: _openHistoryPage,
       ),
     );
   }
