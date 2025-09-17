@@ -35,7 +35,6 @@ class _HistoryPageState extends State<HistoryPage> {
     return Scaffold(
       backgroundColor: CupertinoColors.systemGroupedBackground,
       appBar: AppBar(
-        automaticallyImplyLeading: true,
         title: const Text(
           'History',
           style: TextStyle(
