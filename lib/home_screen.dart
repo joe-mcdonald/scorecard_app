@@ -568,46 +568,40 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<bool> isStrokeHole(int hole, int playerIndex) async {
+    final int playerCount = await dbHelper.getPlayerCount();
+
     // if playercount is 1 return false
-    if (Provider.of<CourseDataProvider>(context).playerCount == 1) {
+    if (playerCount <= 1) {
       return false;
     }
 
     // if there are 2 players, use the 1v1 matchplay. the player with the lower handicap gets the strokes (stroke difference)
-    if (Provider.of<CourseDataProvider>(context).playerCount == 2 ||
-        (Provider.of<CourseDataProvider>(context).playerCount == 3 &&
-            (playerIndex == 0 || playerIndex == 1))) {
+    if (playerCount == 2) {
       if (playerIndex == 0) {
         // if player 1
         int player1Handicap = await dbHelper.getHandicap(0) ?? 0;
         int player2Handicap = await dbHelper.getHandicap(1) ?? 0;
         int handicapDifference = player1Handicap - player2Handicap;
-        return mensHcap[hole] <= handicapDifference;
+        return handicapDifference > 0 && mensHcap[hole] <= handicapDifference;
       } else if (playerIndex == 1) {
         // if player 2
         int player1Handicap = await dbHelper.getHandicap(0) ?? 0;
         int player2Handicap = await dbHelper.getHandicap(1) ?? 0;
         int handicapDifference = player2Handicap - player1Handicap;
-        return mensHcap[hole] <= handicapDifference;
-      } else {
-        return false; // if there are 3 players, the 3rd player isnt involved so return false
+        return handicapDifference > 0 && mensHcap[hole] <= handicapDifference;
       }
     }
 
     int playerHandicap = await dbHelper.getHandicap(playerIndex) ?? 0;
     int lowestHandicap = 999;
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < playerCount; i++) {
       int handicap = await dbHelper.getHandicap(i) ?? 0;
       if (handicap < lowestHandicap) {
         lowestHandicap = handicap;
       }
     }
     int handicapDifference = playerHandicap - lowestHandicap;
-    // if (mensHandicap) {
-    return mensHcap[hole] <= handicapDifference.abs();
-    // } else {
-    //   return womensHcap[hole] <= handicapDifference.abs();
-    // }
+    return handicapDifference > 0 && mensHcap[hole] <= handicapDifference;
   }
 
   void _toggleFairway(int index) async {
@@ -670,10 +664,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showSkinsOverlay(BuildContext context) {
     final overlay = Overlay.of(context);
+    final List<int> skinsWonCount = List.generate(
+      playersControllers.length,
+      (playerIndex) =>
+          skinValue > 0 ? (skinsWon[playerIndex] ~/ skinValue) : 0,
+    );
 
     _skinsOverlay = createSkinsOverlay(
       playerNamesFuture: _fetchPlayerNames(),
-      skinsWon: skinsWon,
+      skinsWonCount: skinsWonCount,
       playerCount: playersControllers.length,
     );
 
@@ -1200,6 +1199,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             SkinsRow(
                               holeNumber: 1,
                               skinValue: skinsArray,
+                              skinUnitValue: skinValue,
                             ),
                           if (showPutterRow)
                             Padding(

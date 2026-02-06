@@ -225,42 +225,47 @@ class _PlayerRowState extends State<PlayerRow> {
               // ignore: use_build_context_synchronously
               context: context,
               builder: (context) => CupertinoAlertDialog(
-                content: Column(
-                  children: [
-                    CupertinoTextField(
-                      controller: widget.nameController,
-                      keyboardType: TextInputType.text,
-                      enableSuggestions: false,
-                      maxLength: 5,
-                      placeholder: 'Name',
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: Colors.transparent),
-                        borderRadius:
-                            const BorderRadius.all(Radius.circular(12)),
+                content: Container(
+                  height: 100,
+                  child: Column(
+                    children: [
+                      CupertinoTextField(
+                        controller: widget.nameController,
+                        keyboardType: TextInputType.text,
+                        enableSuggestions: false,
+                        maxLength: 5,
+                        placeholder: 'Name',
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: Colors.transparent),
+                          borderRadius:
+                              const BorderRadius.all(Radius.circular(12)),
+                        ),
+                        textAlign: TextAlign.center,
+                        style:
+                            const TextStyle(color: Colors.black, fontSize: 20),
                       ),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.black, fontSize: 20),
-                    ),
-                    const SizedBox(height: 20),
-                    CupertinoTextField(
-                      controller: widget.hcapController,
-                      placeholder: 'Handicap',
-                      keyboardType: const TextInputType.numberWithOptions(
-                        signed: false,
-                        decimal: true,
+                      const SizedBox(height: 20),
+                      CupertinoTextField(
+                        controller: widget.hcapController,
+                        placeholder: 'Handicap',
+                        keyboardType: const TextInputType.numberWithOptions(
+                          signed: false,
+                          decimal: true,
+                        ),
+                        maxLength: 5,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: Colors.transparent),
+                          borderRadius:
+                              const BorderRadius.all(Radius.circular(12)),
+                        ),
+                        textAlign: TextAlign.center,
+                        style:
+                            const TextStyle(color: Colors.black, fontSize: 20),
                       ),
-                      maxLength: 5,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: Colors.transparent),
-                        borderRadius:
-                            const BorderRadius.all(Radius.circular(12)),
-                      ),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.black, fontSize: 20),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 actions: [
                   if (playerCount > 1)

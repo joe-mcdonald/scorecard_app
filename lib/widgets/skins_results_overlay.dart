@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 OverlayEntry createSkinsOverlay({
   required Future<List<String>> playerNamesFuture,
-  required List<int> skinsWon,
+  required List<int> skinsWonCount,
   required int playerCount,
 }) {
   return OverlayEntry(
@@ -35,7 +35,7 @@ OverlayEntry createSkinsOverlay({
                       padding: const EdgeInsets.all(16),
                       child: _SkinsResultsContent(
                         playerNames: playerNames,
-                        skinsWon: skinsWon,
+                        skinsWonCount: skinsWonCount,
                         playerCount: playerCount,
                       ),
                     ),
@@ -53,12 +53,12 @@ OverlayEntry createSkinsOverlay({
 class _SkinsResultsContent extends StatelessWidget {
   const _SkinsResultsContent({
     required this.playerNames,
-    required this.skinsWon,
+    required this.skinsWonCount,
     required this.playerCount,
   });
 
   final List<String> playerNames;
-  final List<int> skinsWon;
+  final List<int> skinsWonCount;
   final int playerCount;
 
   @override
@@ -78,7 +78,7 @@ class _SkinsResultsContent extends StatelessWidget {
           if (index != 0) const SizedBox(height: 8),
           _SkinsResultRow(
             name: _playerName(index),
-            amount: index < skinsWon.length ? skinsWon[index] : 0,
+            count: index < skinsWonCount.length ? skinsWonCount[index] : 0,
           ),
         ],
       ],
@@ -96,11 +96,11 @@ class _SkinsResultsContent extends StatelessWidget {
 class _SkinsResultRow extends StatelessWidget {
   const _SkinsResultRow({
     required this.name,
-    required this.amount,
+    required this.count,
   });
 
   final String name;
-  final int amount;
+  final int count;
 
   @override
   Widget build(BuildContext context) {
@@ -112,7 +112,7 @@ class _SkinsResultRow extends StatelessWidget {
           style: const TextStyle(fontSize: 20),
         ),
         Text(
-          '\$$amount',
+          '$count',
           style: const TextStyle(fontSize: 20),
         ),
       ],

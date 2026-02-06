@@ -6,11 +6,13 @@ import 'package:scorecard_app/scale_factor_provider.dart';
 class SkinsRow extends StatelessWidget {
   final int holeNumber;
   final List<int> skinValue;
+  final int skinUnitValue;
 
   const SkinsRow({
     super.key,
     required this.holeNumber,
     required this.skinValue,
+    required this.skinUnitValue,
   });
 
   @override
@@ -44,7 +46,7 @@ class SkinsRow extends StatelessWidget {
                   padding: const EdgeInsets.all(10.0),
                   child: Center(
                     child: Text(
-                      skinValue[index].toString(),
+                      _skinCountForHole(index).toString(),
                       style: const TextStyle(
                         color: Colors.black,
                         fontSize: 30,
@@ -59,5 +61,12 @@ class SkinsRow extends StatelessWidget {
         SizedBox(width: 104.0 * scaleFactor),
       ],
     );
+  }
+
+  int _skinCountForHole(int index) {
+    if (skinUnitValue <= 0) {
+      return skinValue[index];
+    }
+    return skinValue[index] ~/ skinUnitValue;
   }
 }

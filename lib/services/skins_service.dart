@@ -47,6 +47,7 @@ class SkinsService {
 
       for (int i = 0; i < 18; i++) {
         if (player1Score[i] == 0 || player2Score[i] == 0) {
+          skinsArray[i] = carryOver;
           continue;
         }
 
@@ -60,12 +61,12 @@ class SkinsService {
 
         if (p1NetScore < p2NetScore) {
           skinsArray[i] = carryOver;
-          skinsWon[0] = skinsArray[i];
+          skinsWon[0] += skinsArray[i];
           carryOver = skinValue;
           skinsWonByHole[0][i] = true;
         } else if (p2NetScore < p1NetScore) {
           skinsArray[i] = carryOver;
-          skinsWon[1] = skinsArray[i];
+          skinsWon[1] += skinsArray[i];
           carryOver = skinValue;
           skinsWonByHole[1][i] = true;
         } else {
@@ -99,6 +100,7 @@ class SkinsService {
 
       for (int i = 0; i < 18; i++) {
         if (scores.any((scoreList) => scoreList[i] == 0)) {
+          skinsArray[i] = carryOver;
           continue;
         }
 
